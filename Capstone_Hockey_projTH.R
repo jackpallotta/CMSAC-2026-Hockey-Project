@@ -5,6 +5,7 @@
 #look at OT?
 
 require(nhlscraper)
+require(tidyverse)
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
 
@@ -48,5 +49,21 @@ nhl_rink = draw_NHL_rink()
 
 #gives game play by play data, useful for face-off information, 
 #time in the period, and zone code
-game_pbp = gc_play_by_play(game = 2023030417)
+
+
+#trial data visualization for EDA
+#bar chart of face-offs during the periods with zone codes
+game_pbp = gc_play_by_play(game = 2023030417) |>
+  dplyr::select(periodNumber, secondsElapsedInGame, secondsElapsedInPeriod, eventOwnerTeamId,
+         eventTypeDescKey, zoneCode, xCoordNorm, yCoordNorm, winningPlayerId,
+         losingPlayerId)
+
+str(game_pbp)
+
+game_pbp |>
+  mutate(periodNumber = as.factor(periodNumber)) |>
+  mutate(zoneCode = as.factor(zoneCode)) |>
+  filter(eventTypeDescKey == "faceoff") |>
+  ggplot(aes(x = zoneCode, fill = periodNumber)) +
+  geom_bar() + theme_bw()
 

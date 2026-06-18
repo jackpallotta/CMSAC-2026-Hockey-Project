@@ -5,7 +5,7 @@
 #look at OT?
 
 require(nhlscraper)
-ESPN_games_20242025 <- espn_games(season = 20242025)
+ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
 
 #provides the 2024-2025 pittsburgh roster with face off prct win
@@ -34,3 +34,19 @@ view(fran_playoff_sit)
 pitt_games = games() |>
   filter(homeTeamId == 5 | visitingTeamId ==5) |>
   filter(seasonId == 20242025 | seasonId == 20232024)
+
+#nhl rink drawing (goof for EDA)
+nhl_rink = draw_NHL_rink()
+
+#EDA ideas
+#distribution of where and when face-offs are taken during a game
+
+#x-axis period of game
+#y-axis quantity of face-off
+#potential bar chart with zones
+
+
+#gives game play by play data, useful for face-off information, 
+#time in the period, and zone code
+game_pbp = gc_play_by_play(game = 2023030417)
+

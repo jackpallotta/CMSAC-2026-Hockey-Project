@@ -53,13 +53,14 @@ nhl_rink = draw_NHL_rink()
 
 #trial data visualization for EDA
 #bar chart of face-offs during the periods with zone codes
+#game code is from 2023
 game_pbp = gc_play_by_play(game = 2023030417) |>
   dplyr::select(periodNumber, secondsElapsedInGame, secondsElapsedInPeriod, eventOwnerTeamId,
          eventTypeDescKey, zoneCode, xCoordNorm, yCoordNorm, winningPlayerId,
          losingPlayerId)
 
 str(game_pbp)
-
+#barchart of face-offs with zone code and period number
 game_pbp |>
   mutate(periodNumber = as.factor(periodNumber)) |>
   mutate(zoneCode = as.factor(zoneCode)) |>
@@ -67,3 +68,17 @@ game_pbp |>
   ggplot(aes(x = zoneCode, fill = periodNumber)) +
   geom_bar() + theme_bw()
 
+#pulling all instances of face-offs in the 2024-2025 season
+season_pbp = gc_play_by_plays(season = 20242025)|>
+  dplyr::select(gameId, gameTypeId, periodNumber, secondsElapsedInGame, secondsElapsedInPeriod, 
+                eventOwnerTeamId, eventTypeDescKey, strengthState, zoneCode, xCoordNorm, 
+                yCoordNorm, winningPlayerId, losingPlayerId) |>
+  filter(eventTypeDescKey == "faceoff")
+
+#bar plot of all face-offs with zone-code and period number in the 20242025 season
+#appears that the number of face-offs per zone in each period normalize (which i expected)
+#may have to do a franchise by franchise visualization for the season
+season_pbp |>
+  mutate(periodNumber = as.factor(periodNumber)) |>
+  ggplot(aes(x = zoneCode, fill = periodNumber)) +
+  geom_bar() + theme_bw()

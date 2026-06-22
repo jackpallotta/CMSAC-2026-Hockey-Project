@@ -82,3 +82,52 @@ season_pbp |>
   mutate(periodNumber = as.factor(periodNumber)) |>
   ggplot(aes(x = zoneCode, fill = periodNumber)) +
   geom_bar() + theme_bw()
+
+#look at face-offs and the amount of shots-on-goal right after a face-off
+#potential conditional probability
+#Binomial Bayes theorem: Success is shot on goal after face-off
+#failure: no shot on goal after face-off
+
+game_pbp2024 = gc_play_by_play(game = 2024020025)
+
+
+#gives play by plays for the five seconds after a face-off if anything occurs for one game. 
+#if nothing occurs after the faceoff then the faceoff wont show in the data frame
+
+pbp2024 = gc_play_by_play(game = 2024020025)
+
+pbp2024 = pbp2024 |>
+  mutate(row_id = row_number())
+
+faceoffs = pbp2024 |>
+  filter(eventTypeDescKey == "faceoff")
+
+events_after_faceoff = faceoffs |>
+  select(faceoff_row = row_id,
+         faceoff_time = secondsElapsedInGame) |>
+  cross_join(pbp2024) |>
+  filter(
+    secondsElapsedInGame > faceoff_time, #does not show the initial face-off but 
+    #can show if a face-off occurs within the five seconds of initial faceoff
+    secondsElapsedInGame <= faceoff_time + 10
+  )
+
+#too big?
+#season_pbp2024 = gc_play_by_plays(season = 20242025)
+#
+#season_pbp2024 = season_pbp2024 |>
+# mutate(row_id = row_number())
+#
+#faceoffs = season_pbp2024 |>
+#  filter(eventTypeDescKey == "faceoff")
+#
+#events_after_faceoff = faceoffs |>
+#  select(faceoff_row = row_id,
+#         faceoff_time = secondsElapsedInGame) |>
+#  cross_join(season_pbp2024) |>
+#  filter(
+#    secondsElapsedInGame > faceoff_time, #does not show the initial face-off but 
+#    #can show if a face-off occurs within the five seconds of initial faceoff
+#    secondsElapsedInGame <= faceoff_time + 5
+#  )
+

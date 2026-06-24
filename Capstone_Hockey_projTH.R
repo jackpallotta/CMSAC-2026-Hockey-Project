@@ -109,25 +109,45 @@ events_after_faceoff = faceoffs |>
   filter(
     secondsElapsedInGame > faceoff_time, #does not show the initial face-off but 
     #can show if a face-off occurs within the five seconds of initial faceoff
-    secondsElapsedInGame <= faceoff_time + 10
-  )
+    secondsElapsedInGame <= faceoff_time + 5
+  ) |>
+  mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0))) |>
+  mutate(zoneCode = as.factor(zoneCode),
+         strengthState = as.factor(strengthState),
+         shotType = as.factor(shotType))
 
-#too big?
-#season_pbp2024 = gc_play_by_plays(season = 20242025)
-#
-#season_pbp2024 = season_pbp2024 |>
-# mutate(row_id = row_number())
-#
-#faceoffs = season_pbp2024 |>
-#  filter(eventTypeDescKey == "faceoff")
-#
-#events_after_faceoff = faceoffs |>
-#  select(faceoff_row = row_id,
-#         faceoff_time = secondsElapsedInGame) |>
-#  cross_join(season_pbp2024) |>
-#  filter(
-#    secondsElapsedInGame > faceoff_time, #does not show the initial face-off but 
-#    #can show if a face-off occurs within the five seconds of initial faceoff
-#    secondsElapsedInGame <= faceoff_time + 5
-#  )
+str(events_after_faceoff)
 
+mod1 = glm(is_shot ~ zoneCode+strengthState, data = events_after_faceoff, family = binomial)
+summary(mod1)
+
+#full season play by play with five seconds after a face-off
+season_pbp2024 = gc_play_by_plays(season = 20242025) |>
+  mutate(row_id = row_number())
+
+season_faceoffs = season_pbp2024 |>
+  filter(eventTypeDescKey == "faceoff") |>
+  select(faceoff_row = row_id,
+         gameId,                 
+         periodNumber,                 
+         faceoff_time = secondsElapsedInGame) |>
+  mutate(faceoff_end = faceoff_time + 5)
+
+events_after_faceoff = season_faceoffs |>
+  inner_join(
+    season_pbp2024,
+    by = join_by(
+      gameId == gameId,
+      periodNumber == periodNumber,
+      faceoff_time < secondsElapsedInGame,   
+      faceoff_end >= secondsElapsedInGame    
+    )
+  ) |>
+  mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0))) |>
+  mutate(zoneCode = as.factor(zoneCode),
+         strengthState = as.factor(strengthState),
+         shotType = as.factor(shotType))
+
+events_after_faceoff |>
+  ggplot(aes(x = zoneCode, fill = is_shot)) +
+  geom_bar()

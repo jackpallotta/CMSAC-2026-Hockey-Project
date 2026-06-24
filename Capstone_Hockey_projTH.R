@@ -151,3 +151,24 @@ events_after_faceoff = season_faceoffs |>
 events_after_faceoff |>
   ggplot(aes(x = zoneCode, fill = is_shot)) +
   geom_bar()
+
+#pbp pulled from Jack
+pbp_faceoffs = pbp |>
+  mutate(row_id = row_number()) |>
+  filter(eventTypeDescKey == "faceoff") |>
+  select(faceoff_row = row_id,
+         gameId,                 
+         periodNumber,                 
+         faceoff_time = secondsElapsedInGame) |>
+  mutate(faceoff_end = faceoff_time + 5)
+
+events_after_faceoff2 = pbp_faceoffs |>
+  inner_join(
+    pbp,
+    by = join_by(
+      gameId == gameId,
+      periodNumber == periodNumber,
+      faceoff_time < secondsElapsedInGame,   
+      faceoff_end >= secondsElapsedInGame)) |>
+  mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0) | 
+                               ifelse(eventTypeDescKey == "goal", 1, 0)))

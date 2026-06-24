@@ -153,6 +153,7 @@ events_after_faceoff |>
   geom_bar()
 
 #pbp pulled from Jack
+#pulls the first five seconds after a face-off
 pbp_faceoffs = pbp |>
   mutate(row_id = row_number()) |>
   filter(eventTypeDescKey == "faceoff") |>
@@ -172,3 +173,7 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0) | 
                                ifelse(eventTypeDescKey == "goal", 1, 0)))
+
+
+geom_hockey(league = "NHL")
+

@@ -71,15 +71,61 @@ clean_faceoffInfo |>
   arrange(desc(faceoffWinPct)) |>
   gt()
 
-
-  
-  
-  
+# Sean Couturier (8476461) and Kevin Stenlund (8478831)
+# COME BACK HERE LATER :)
 
 
+## looking at external conditions for a faceoff (20252026 season)
+## link faceoff dots
+
+dabble = gc_play_by_play(game = 2023030417)
+
+dabbleFaceoffs = dabble |>
+  filter(eventTypeDescKey == 'faceoff')
+
+dabbleFaceoffs
+
+## using Tess' events_after_faceoff2 (dataset of events that fall into our 5-sec window)
+pbp_faceoffs = pbp |>
+  mutate(row_id = row_number()) |>
+  filter(eventTypeDescKey == "faceoff") |>
+  select(faceoff_row = row_id,
+         gameId,                 
+         periodNumber,                 
+         faceoff_time = secondsElapsedInGame) |>
+  mutate(faceoff_end = faceoff_time + 5)
+
+events_after_faceoff2 = pbp_faceoffs |>
+  inner_join(
+    pbp,
+    by = join_by(
+      gameId == gameId,
+      periodNumber == periodNumber,
+      faceoff_time < secondsElapsedInGame,   
+      faceoff_end >= secondsElapsedInGame)) |>
+  mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0) | 
+                               ifelse(eventTypeDescKey == "goal", 1, 0)))
 
 
+# should delayed penalty be in here??
+stoppageEventNames = c('faceoff','stoppage','period-end','penalty','game-end')
 
-
+# most common events that occur in our time threshold
+cleaned_events = events_after_faceoff2 |>
+  mutate(
+    eventTypeDescKey = if_else(
+      eventTypeDescKey %in% stoppageEventNames,
+      'stoppageEvent',
+      eventTypeDescKey
+    )) |>
+  count(eventTypeDescKey) |>
+  arrange(desc(n)) |>
+  ggplot(aes(x = fct_reorder(eventTypeDescKey,desc(n)), y = n)) + 
+  geom_col() + 
+  theme_minimal() + 
+  labs(x = 'Event Type',
+       y = 'Number of Occurrences',
+       title = 'Most Common Event Types Within 5 Seconds of Faceoff') + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 

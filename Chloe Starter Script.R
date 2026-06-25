@@ -91,7 +91,7 @@ pbp_faceoffs = pbp |>
   filter(eventTypeDescKey == "faceoff") |>
   select(faceoff_row = row_id,
          gameId,                 
-         periodNumber,                 
+         periodNumber,
          faceoff_time = secondsElapsedInGame) |>
   mutate(faceoff_end = faceoff_time + 5)
 
@@ -117,7 +117,9 @@ cleaned_events = events_after_faceoff2 |>
       eventTypeDescKey %in% stoppageEventNames,
       'stoppageEvent',
       eventTypeDescKey
-    )) |>
+    ))
+  
+cleaned_events |>
   count(eventTypeDescKey) |>
   arrange(desc(n)) |>
   ggplot(aes(x = fct_reorder(eventTypeDescKey,desc(n)), y = n)) + 
@@ -127,5 +129,25 @@ cleaned_events = events_after_faceoff2 |>
        y = 'Number of Occurrences',
        title = 'Most Common Event Types Within 5 Seconds of Faceoff') + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+## faceoff dot linking attempt
+faceoffs = pbp |>
+  mutate(row_id = row_number()) |>
+  filter(eventTypeDescKey == "faceoff") |>
+  mutate(faceoff_row = row_id,
+         faceoff_time = secondsElapsedInGame) |>
+  mutate(faceoff_end = faceoff_time + 5)
+
+faceoffs = faceoffs |>
+  filter(eventTypeDescKey == 'faceoff') |>
+  mutate(faceoffDotCategory = case_when(xCoord == -69 & yCoord == 22 ~ '1',
+                                        xCoord == -20 & yCoord == 22 ~ '2',
+                                        xCoord == 20 & yCoord == 22 ~ '3',
+                                        xCoord == 69 & yCoord == 22 ~ '4',
+                                        xCoord == -69 & yCoord == -22 ~ '5',
+                                        xCoord == -20 & yCoord == -22 ~ '6',
+                                        xCoord == 20 & yCoord == -22 ~ '7',
+                                        xCoord == 69 & yCoord == -22 ~ '8',
+                                        xCoord == 0 & yCoord == 0 ~ 'C'))
 
 

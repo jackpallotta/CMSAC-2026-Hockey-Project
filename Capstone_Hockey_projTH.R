@@ -6,6 +6,7 @@
 
 require(nhlscraper)
 require(tidyverse)
+require(car)
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
 
@@ -173,13 +174,46 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0)))
 
+#Trying to answer do Face-offs matter?
 mod2 = glm(fo_success ~ xG + zoneCode + xCoordNorm + yCoordNorm + scoreState, 
            data = events_after_faceoff2, family = binomial)
 summary(mod2)
 
+#fairly significant model may add on some additional variables later
 mod3 = glm(fo_success~xG*zoneCode + xCoordNorm, 
            data = events_after_faceoff2, family = binomial)
 summary(mod3)
 
-geom_hockey(league = "NHL")
+#likelihood ratio test for mod3
+Anova(mod3, type="II", test = "LR")
+
+exp(confint(mod3)) #no negatives
+require(broom)
+tidy(mod3, exponentiate = TRUE, conf.int = TRUE)
+
+#library(gtsummary)
+#tbl_regression(mod3, exponentiate = TRUE)
+
+mod3_pred_prob = predict(mod3, type = "response") 
+#for every obs the pred prob of winning
+
+mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
+#labeling the predictions as a win or loss
+
+mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
+
+#mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
+
+prop.table(table(events_after_faceoff2$fo_success))
+
+#Brier Score of 0.123
+mean((mod3_pred_binary - mod3_pred_prob)^2)
+
+#attempt at drawing shots on goal and goals on nhl rink
+rink = geom_hockey(league = "NHL")
+shot_data = events_after_faceoff2[(events_after_faceoff2$eventTypeDescKey == "shot-on-goal") |
+                                    (events_after_faceoff2$eventTypeDescKey== "goal"),]
+
+rink + 
+  geom_point(data = shot_data, aes(xCoord, yCoord), alpha = 0.5)
 

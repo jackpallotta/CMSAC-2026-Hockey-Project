@@ -65,27 +65,13 @@ pbp <- pbp |>
     eventTypeDescKey %in% c("goal", "shot-on-goal", "missed-shot", "blocked-shot") ~ 1,
     TRUE ~ 0))
 
-# temp column
-pbp <- pbp |>
-  arrange(gameId, eventId) |>
-  group_by(gameId) |>
-  mutate(totalScore = cumsum(goal)) |>
-  ungroup() |>
-  group_by(gameId, eventTeamVenue) |>
-  mutate(score = cumsum(goal)) |>
-  ungroup()
-
-# create score state variable = score of event team - score of opponent
-pbp <- pbp |>
-  mutate(scoreState = (score*2) - totalScore - goal) |>
-  select(-totalScore, -score)
-
 # select variables of interest
 pbp <- pbp |>
   select(gameId, eventId, seasonId, periodNumber, periodType, secondsElapsedInPeriod, secondsElapsedInGame,
          eventOwnerTeamId, eventTeamVenue, eventTypeDescKey, situationCode, homeIsEmptyNet, awayIsEmptyNet,
          isEmptyNetFor, isEmptyNetAgainst, homeSkaterCount, awaySkaterCount, skaterCountFor, skaterCountAgainst,
-         manDifferential, strengthState, scoreState, lastEvent, TSLE, goaliePlayerIdFor, goaliePlayerIdAgainst, 
+         manDifferential, strengthState, goalDifferential, homeGoals, awayGoals, goalsFor, goalsAgainst,
+         lastEvent, TSLE, goaliePlayerIdFor, goaliePlayerIdAgainst, 
          skater1PlayerIdFor, skater1PlayerIdAgainst, skater2PlayerIdFor, skater2PlayerIdAgainst, skater3PlayerIdFor, 
          skater3PlayerIdAgainst, skater4PlayerIdFor, skater4PlayerIdAgainst, skater5PlayerIdFor, 
          skater5PlayerIdAgainst, skater6PlayerIdFor, skater6PlayerIdAgainst, homeTeamDefendingSide,

@@ -171,14 +171,14 @@ events_after_faceoff2 = pbp_faceoffs |>
       periodNumber == periodNumber,
       faceoff_time < secondsElapsedInGame,   
       faceoff_end >= secondsElapsedInGame)) |>
-  mutate(is_shot = as.factor(ifelse(eventTypeDescKey == "shot-on-goal", 1, 0) | 
-                               ifelse(eventTypeDescKey == "goal", 1, 0)))
+  mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0)))
 
-mod2 = glm(is_shot ~ xG + zoneCode + xCoord + yCoord + scoreState, 
+mod2 = glm(fo_success ~ xG + zoneCode + xCoordNorm + yCoordNorm + scoreState, 
            data = events_after_faceoff2, family = binomial)
 summary(mod2)
 
-mod3 = glm(is_shot~xG*zoneCode, data = events_after_faceoff2, family = binomial)
+mod3 = glm(fo_success~xG*zoneCode + xCoordNorm, 
+           data = events_after_faceoff2, family = binomial)
 summary(mod3)
 
 geom_hockey(league = "NHL")

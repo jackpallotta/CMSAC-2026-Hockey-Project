@@ -34,7 +34,6 @@ faceoffs_with_shots_2 <- faceoffs_with_shots |>
   filter(n_distinct(eventOwnerTeamId) == 1) |>
   ungroup()
 
-
 # count number of faceoffs where the winning team recorded an unblocked shot attempt within 5 seconds
 faceoffs_with_shots_2 |>
   filter(eventTypeDescKey == "faceoff") |>
@@ -51,7 +50,7 @@ leverage <- pbp_cleaned |>
          eventOwnerTeamId, eventTeamVenue, eventTypeDescKey, situationCode, homeIsEmptyNet, awayIsEmptyNet,
          isEmptyNetFor, isEmptyNetAgainst, homeSkaterCount, awaySkaterCount, skaterCountFor, skaterCountAgainst,
          manDifferential, strengthState, goalDifferential, homeGoals, awayGoals, goalsFor, goalsAgainst,
-         xCoord, yCoord, xCoordNorm, yCoordNorm, winningPlayerId, losingPlayerId) |>
+         xCoord, yCoord, xCoordNorm, yCoordNorm, zoneCode, winningPlayerId, losingPlayerId) |>
   filter(eventTypeDescKey == "faceoff")
 
 

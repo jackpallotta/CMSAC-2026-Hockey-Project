@@ -7,6 +7,10 @@
 require(nhlscraper)
 require(tidyverse)
 require(car)
+require(mgcv)
+
+theme_set(theme_bw())
+
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
 
@@ -172,7 +176,11 @@ events_after_faceoff2 = pbp_faceoffs |>
       periodNumber == periodNumber,
       faceoff_time < secondsElapsedInGame,   
       faceoff_end >= secondsElapsedInGame)) |>
-  mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0)))
+  mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
+  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot"  ))
+#mutate shot attempts looking at missed, blocked and shots on goal
+
+events_after_faceoff2 = events_after_faceoff2 |> mutate(zoneCode = fct_relevel(zoneCode, "N"))
 
 #Trying to answer do Face-offs matter?
 mod2 = glm(fo_success ~ xG + zoneCode + xCoordNorm + yCoordNorm + scoreState, 
@@ -180,9 +188,16 @@ mod2 = glm(fo_success ~ xG + zoneCode + xCoordNorm + yCoordNorm + scoreState,
 summary(mod2)
 
 #fairly significant model may add on some additional variables later
-mod3 = glm(fo_success~xG*zoneCode + xCoordNorm, 
+mod3 = glm(fo_success~xG*zoneCode + xCoordNorm + distance, 
            data = events_after_faceoff2, family = binomial)
 summary(mod3)
+
+mod4 = glm(is_shot_atmpt ~ xG + zoneCode +xCoordNorm + distance,
+           data = events_after_faceoff2, family = binomial)
+summary(mod4)
+
+require(bbmle)
+AICtab(mod3, mod4, base=TRUE, sort=TRUE)
 
 #likelihood ratio test for mod3
 Anova(mod3, type="II", test = "LR")
@@ -205,6 +220,7 @@ mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
 prop.table(table(events_after_faceoff2$fo_success))
+prop.table(table(events_after_faceoff2$is_shot_atmpt))
 
 #Brier Score of 0.123
 mean((mod3_pred_binary - mod3_pred_prob)^2)
@@ -217,3 +233,52 @@ shot_data = events_after_faceoff2[(events_after_faceoff2$eventTypeDescKey == "sh
 rink + 
   geom_point(data = shot_data, aes(xCoord, yCoord), alpha = 0.5)
 
+events_after_faceoff2 |>
+  ggplot(aes(x = distance, y = xG,
+             color = as.factor(fo_success))) +
+  geom_point(alpha = 0.2)
+
+
+barplot1 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 5) |>
+  ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
+  geom_bar() +
+  labs(title = "Team 5 (PIT)")
+barplot1
+
+barplot2 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 12) |>
+  ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
+  geom_bar() +
+  labs(fill = "Is Shot Attempt", title = "Team 12 (CAR)") +
+  theme(legend.position = "none")
+barplot2
+
+barplot3 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 16) |>
+  ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
+  geom_bar() +
+  labs(fill = "Is Shot Attempt", title = "Team 16 (CHI)") 
+barplot3
+
+require(patchwork)
+barplot2 + barplot3
+
+
+barplot4 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16, !is.na(zoneCode)) |> 
+  ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
+  geom_bar() +
+  facet_wrap(~ eventOwnerTeamId) +
+  labs(fill = "Is Shot Attempt") +
+  theme(legend.position = "bottom")
+barplot4
+
+barplot5 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16, !is.na(zoneCode)) |> 
+  ggplot(aes(x = zoneCode, fill = as.factor(fo_success))) +
+  geom_bar() +
+  facet_wrap(~ eventOwnerTeamId) +
+  labs(fill = "Is face-off Success") +
+  theme(legend.position = "bottom")
+barplot5

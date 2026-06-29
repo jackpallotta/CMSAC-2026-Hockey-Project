@@ -266,19 +266,19 @@ barplot2 + barplot3
 
 
 barplot4 = events_after_faceoff2 |>
-  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16, !is.na(zoneCode)) |> 
+  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
   ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
   geom_bar() +
   facet_wrap(~ eventOwnerTeamId) +
-  labs(fill = "Is Shot Attempt") +
+  labs(fill = "Is Shot Attempt", title = "Barplot of Shot Attempts between three NHL teams") +
   theme(legend.position = "bottom")
 barplot4
 
 barplot5 = events_after_faceoff2 |>
-  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16, !is.na(zoneCode)) |> 
+  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
   ggplot(aes(x = zoneCode, fill = as.factor(fo_success))) +
   geom_bar() +
   facet_wrap(~ eventOwnerTeamId) +
-  labs(fill = "Is face-off Success") +
+  labs(fill = "Is face-off Success", title = "Barplot of Face-off Successes between three NHL teams") +
   theme(legend.position = "bottom")
 barplot5

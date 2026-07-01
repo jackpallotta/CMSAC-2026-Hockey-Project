@@ -177,7 +177,7 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_time < secondsElapsedInGame,   
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
-  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot"  ))
+  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal"))
 #mutate shot attempts looking at missed, blocked and shots on goal
 
 events_after_faceoff2 = events_after_faceoff2 |> mutate(zoneCode = fct_relevel(zoneCode, "N"))
@@ -192,19 +192,34 @@ mod3 = glm(fo_success~xG*zoneCode + xCoordNorm + distance,
            data = events_after_faceoff2, family = binomial)
 summary(mod3)
 
-mod4 = glm(is_shot_atmpt ~ xG + zoneCode +xCoordNorm + distance,
+#when xG is used as a predictor the model will fail to converge when using goal in shot atmpts
+#taking out xG puts the model back to where it was prior to putting goals in variable shot atmpts
+mod4 = glm(is_shot_atmpt ~  zoneCode +xCoordNorm + distance,
            data = events_after_faceoff2, family = binomial)
 summary(mod4)
+
+require(mgcv)
+events_after_faceoff2$is_shot_atmpt = as.factor(events_after_faceoff2$is_shot_atmpt)
+events_after_faceoff2$zoneCode = as.factor(events_after_faceoff2$zoneCode)
+#when putting in goals as a success for the variable "is_shot_attmpt" 
+#can not use xG as a predictor
+mod5 = gam(is_shot_atmpt~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance), 
+           data = events_after_faceoff2, family = binomial(link = logit) , method = "REML")
+summary(mod5)
 
 require(bbmle)
 AICtab(mod3, mod4, base=TRUE, sort=TRUE)
 
 #likelihood ratio test for mod3
 Anova(mod3, type="II", test = "LR")
+Anova(mod4, type = "II", test = "LR")
 
 exp(confint(mod3)) #no negatives
+exp(confint(mod4))
+
 require(broom)
 tidy(mod3, exponentiate = TRUE, conf.int = TRUE)
+tidy(mod4, exponentiate = TRUE, conf.int = TRUE)
 
 #library(gtsummary)
 #tbl_regression(mod3, exponentiate = TRUE)
@@ -212,10 +227,18 @@ tidy(mod3, exponentiate = TRUE, conf.int = TRUE)
 mod3_pred_prob = predict(mod3, type = "response") 
 #for every obs the pred prob of winning
 
+mod4_pred_prob = predict(mod4, type = "response") 
+#for every obs the pred prob of winning
+
 mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
 
+mod4_pred_class = ifelse(mod4_pred_prob > 0.5, "Win", "Loss") 
+#labeling the predictions as a win or loss
+
 mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
+
+mod4_pred_binary = ifelse(mod4_pred_prob > 0.5, 1, 0)
 
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
@@ -224,6 +247,21 @@ prop.table(table(events_after_faceoff2$is_shot_atmpt))
 
 #Brier Score of 0.123
 mean((mod3_pred_binary - mod3_pred_prob)^2)
+
+#BRIER scorte extremly low of 0.0024
+mean((mod4_pred_binary - mod4_pred_prob)^2)
+
+
+#attempt at checking the ROC of mod4
+#library(pROC)
+#want the area under the roc curve to be as large as possible
+#filtered = events_after_faceoff2 |> 
+#  filter(!is.na(xG), !is.na(zoneCode), !is.na(xCoordNorm), !is.na(distance)) |>
+#  mutate(pred_prob = predict(mod4, type = "response"))
+#mod4_roc = roc(response = filtered$result, predicted = filtered$pred_prob)
+# str(cricket_roc)
+#mod4_roc$auc
+
 
 #attempt at drawing shots on goal and goals on nhl rink
 rink = geom_hockey(league = "NHL")

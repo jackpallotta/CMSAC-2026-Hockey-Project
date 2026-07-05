@@ -8,6 +8,7 @@ require(nhlscraper)
 require(tidyverse)
 require(car)
 require(mgcv)
+require(lme4)
 
 theme_set(theme_bw())
 
@@ -198,17 +199,32 @@ mod4 = glm(is_shot_atmpt ~  zoneCode +xCoordNorm + distance,
            data = events_after_faceoff2, family = binomial)
 summary(mod4)
 
+#looking at GAM models
 require(mgcv)
 events_after_faceoff2$is_shot_atmpt = as.factor(events_after_faceoff2$is_shot_atmpt)
 events_after_faceoff2$zoneCode = as.factor(events_after_faceoff2$zoneCode)
 #when putting in goals as a success for the variable "is_shot_attmpt" 
 #can not use xG as a predictor
-mod5 = gam(is_shot_atmpt~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance), 
+gam.mod = gam(is_shot_atmpt~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance), 
            data = events_after_faceoff2, family = binomial(link = logit) , method = "REML")
-summary(mod5)
+summary(gam.mod)
+
+gam.mod2 = gam(fo_success~s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance) + s(xG),
+               data = events_after_faceoff2, family = binomial(link=logit), method = "REML")
+summary(gam.mod2)
+
+gam.mod3 = gam(is_shot_atmpt ~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) ,
+               data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
+summary(gam.mod3)$s.table
+
+#looking at glmm models
+glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
+                 data = events_after_faceoff2, family = binomial(link=logit))
+summary(glmm.mod)
 
 require(bbmle)
-AICtab(mod3, mod4, base=TRUE, sort=TRUE)
+#gam.mod2 is currently the best, overall it is looking like the best predictor variable might be fo_success
+AICtab(mod3, mod4,gam.mod, gam.mod2, glmm.mod, base=TRUE, sort=TRUE)
 
 #likelihood ratio test for mod3
 Anova(mod3, type="II", test = "LR")
@@ -305,18 +321,24 @@ barplot2 + barplot3
 
 barplot4 = events_after_faceoff2 |>
   filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
+  mutate(teams = case_when(eventOwnerTeamId == 12 ~ "CAR",
+                           eventOwnerTeamId == 16 ~ "CHI",
+                           eventOwnerTeamId == 5 ~ "PIT")) |>
   ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
   geom_bar() +
-  facet_wrap(~ eventOwnerTeamId) +
-  labs(fill = "Is Shot Attempt", title = "Barplot of Shot Attempts between three NHL teams") +
+  facet_wrap(~ teams) +
+  labs(fill = "Is Shot Attempt", title = "Shot Attempts between three NHL Teams") +
   theme(legend.position = "bottom")
 barplot4
 
 barplot5 = events_after_faceoff2 |>
   filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
+  mutate(teams = case_when(eventOwnerTeamId == 12 ~ "CAR",
+                           eventOwnerTeamId == 16 ~ "CHI",
+                           eventOwnerTeamId == 5 ~ "PIT")) |>
   ggplot(aes(x = zoneCode, fill = as.factor(fo_success))) +
   geom_bar() +
-  facet_wrap(~ eventOwnerTeamId) +
-  labs(fill = "Is face-off Success", title = "Barplot of Face-off Successes between three NHL teams") +
+  facet_wrap(~ teams) +
+  labs(fill = "Is face-off Success", title = "Face-off Successes between three NHL Teams") +
   theme(legend.position = "bottom")
 barplot5

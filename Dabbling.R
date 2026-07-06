@@ -4,6 +4,27 @@
 
 ## (just for fun!)
 
+usethis::use_git_config(user.name = "chloeguagliano", 
+                        user.email = "chloeguagliano@gmail.com")
+usethis::create_github_token()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Let's get started!
 library(nhlscraper)
 library(tidyverse)
@@ -29,9 +50,9 @@ nonRegulationGoalEvents = goalEvents |>
 gamesWithOvertime = as.list(unique(nonRegulationGoalEvents$gameId))
 
 goalEvents = goalEvents |>
-  filter(! (gameId %in% gamesWithOvertime))
+  filter(! (gameId %in% gamesWithOvertime)) |>
 
-## fitting a log model
+## fitting an initial log model (scoreState, secondsElapsedInGame, no interaction)
 basic_logit = glm(scoringTeamWin ~ secondsElapsedInGame + scoreState, 
                   data = goalEvents, family = binomial)
 
@@ -39,7 +60,6 @@ tidy(basic_logit, conf.int = TRUE, exponentiate = TRUE) |>
   mutate(p.value = formatC(p.value, format = "f", digits = 3))
 
 tbl_regression(basic_logit, exponentiate = TRUE)
-
 
 
 ##### DON'T DERIVE ANY ACC RESULTS FROM THIS UNTIL THE LOGIT MODEL IS 
@@ -82,4 +102,43 @@ prediction_grid |>
              group = scoreState)) + 
   geom_point() + 
   geom_line()
+
+######## TESTING OTHER VARIATIONS OF THE BASE MODEL
+set.seed(91)
+N_FOLDS <- 5 # how do you choose number of folds for cross-validation?
+goalEvents = goalEvents |>
+  mutate(fold = sample(rep(1:N_FOLDS, length.out = n())))
+
+table(goalEvents$fold)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######## (Model C and D -> interaction and timeRemaining changes)
+
+## fitting base model C (scoreState, secondsElapsedInGame, no interaction)
+base_logit_c = glm(scoringTeamWin ~ secondsElapsedInGame * scoreState, 
+                  data = goalEvents, family = binomial)
+
+tidy(base_logit_c, conf.int = TRUE, exponentiate = TRUE)
+  # mutate(p.value = formatC(p.value, format = "f", digits = 3))
+  
+
+
+tbl_regression(base_logit_c, exponentiate = TRUE)
+
+
 

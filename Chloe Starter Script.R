@@ -37,7 +37,7 @@ clean_faceoffInfo = faceoffInfo |>
 set.seed(91)
 std_kmeans = clean_faceoffInfo |> 
   select(std_totalFaceoffs, std_faceoffWinPct) |> 
-  kmeans(algorithm = "Lloyd", centers = 4, nstart = 30, iter.max = 20)
+  kmeans(algorithm = "Lloyd", centers = 4, nstart = 30, iter.max = 40)
 
 clean_faceoffInfo |>
   mutate(

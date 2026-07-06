@@ -68,7 +68,7 @@ pbp <- pbp |>
 # select variables of interest
 pbp <- pbp |>
   select(gameId, eventId, seasonId, periodNumber, periodType, secondsElapsedInPeriod, secondsElapsedInGame,
-         eventOwnerTeamId, eventTeamVenue, eventTypeDescKey, situationCode, homeIsEmptyNet, awayIsEmptyNet,
+         eventOwnerTeamId, eventTeamVenue, eventTypeDescKey, situationCode, isHome, homeIsEmptyNet, awayIsEmptyNet,
          isEmptyNetFor, isEmptyNetAgainst, homeSkaterCount, awaySkaterCount, skaterCountFor, skaterCountAgainst,
          manDifferential, strengthState, goalDifferential, homeGoals, awayGoals, goalsFor, goalsAgainst,
          lastEvent, TSLE, goaliePlayerIdFor, goaliePlayerIdAgainst, 

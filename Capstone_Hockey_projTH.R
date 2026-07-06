@@ -158,6 +158,7 @@ events_after_faceoff |>
   ggplot(aes(x = zoneCode, fill = is_shot)) +
   geom_bar()
 
+#Play by play Official----
 #pbp pulled from Jack
 #pulls the first five seconds after a face-off
 pbp_faceoffs = pbp |>
@@ -179,7 +180,7 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
   mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal"))
-#mutate shot attempts looking at missed, blocked and shots on goal
+#mutate shot attempts looking at missed, shots on goal, and goal
 
 events_after_faceoff2 = events_after_faceoff2 |> mutate(zoneCode = fct_relevel(zoneCode, "N"))
 
@@ -205,6 +206,7 @@ events_after_faceoff2$is_shot_atmpt = as.factor(events_after_faceoff2$is_shot_at
 events_after_faceoff2$zoneCode = as.factor(events_after_faceoff2$zoneCode)
 #when putting in goals as a success for the variable "is_shot_attmpt" 
 #can not use xG as a predictor
+#look at just the `is_shot_atmpt` variable since it has an overall higher adj r^2
 gam.mod = gam(is_shot_atmpt~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance), 
            data = events_after_faceoff2, family = binomial(link = logit) , method = "REML")
 summary(gam.mod)
@@ -213,18 +215,18 @@ gam.mod2 = gam(fo_success~s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance) +
                data = events_after_faceoff2, family = binomial(link=logit), method = "REML")
 summary(gam.mod2)
 
-gam.mod3 = gam(is_shot_atmpt ~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) ,
+gam.mod3 = gam(is_shot_atmpt ~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + s(periodNumber, bs = "re"),
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod3)$s.table
 
-#looking at glmm models
+#looking at glmm models (Absolute trash)
 glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
                  data = events_after_faceoff2, family = binomial(link=logit))
 summary(glmm.mod)
 
 require(bbmle)
 #gam.mod2 is currently the best, overall it is looking like the best predictor variable might be fo_success
-AICtab(mod3, mod4,gam.mod, gam.mod2, glmm.mod, base=TRUE, sort=TRUE)
+AICtab(mod3, mod4,gam.mod, gam.mod2, gam.mod3, glmm.mod, base=TRUE, sort=TRUE)
 
 #likelihood ratio test for mod3
 Anova(mod3, type="II", test = "LR")
@@ -342,3 +344,11 @@ barplot5 = events_after_faceoff2 |>
   labs(fill = "Is face-off Success", title = "Face-off Successes between three NHL Teams") +
   theme(legend.position = "bottom")
 barplot5
+
+#proportion table for shot attempts separated by teams
+round(prop.table(table(events_after_faceoff2$is_shot_atmpt,
+      events_after_faceoff2$eventOwnerTeamId,
+      events_after_faceoff2$zoneCode), margin = c(2,3)), 3)
+
+table(events_after_faceoff2$eventOwnerTeamId)
+

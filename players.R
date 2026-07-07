@@ -61,6 +61,6 @@ players <- bind_rows(skaters, goalies)
 rm(skaters, goalies)
 
 players <- players |>
-  mutate(playerId = as.character(playerId))
+  mutate(playerId = as.integer(playerId))
 
 saveRDS(players, "players.rds")

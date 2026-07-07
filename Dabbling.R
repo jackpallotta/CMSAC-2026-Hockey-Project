@@ -11,6 +11,7 @@ library(dplyr)
 library(purrr)
 library(gtsummary)
 library(broom)
+library(forcats)
 
 ## filtering pbp so there's only goals
 goalEvents = pbp |>
@@ -178,6 +179,17 @@ goalValues |>
        y = 'Average Goal Value',
        title = 'Average Goal Value by Score State Achieved')
 
+## want to see box plots / spread of goalValue for each scoreState achieved over time
+goalValues |>
+  group_by(nextScoreStateGroup) |>
+  ggplot(aes(x = fct_relevel(nextScoreStateGroup,'-3','-2','-1','0','1','2','3','GE_4'), 
+                             y = goalValue, fill = nextScoreStateGroup)) +
+  geom_boxplot()
 
-
-####
+## line chart of how value of a scoreState achieved changes over timeElapsed
+goalValues |>
+  group_by(nextScoreStateGroup) |>
+  ggplot(aes(x = secondsElapsedInGame, y = goalValue, color = factor(nextScoreStateGroup))) +
+  geom_point() + 
+  geom_line() + 
+  facet_wrap(~factor(nextScoreStateGroup), scales = "free_x")

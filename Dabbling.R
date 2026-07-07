@@ -4,9 +4,6 @@
 
 ## (just for fun!)
 
-## new beautiful personal access token:
-## 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
-
 
 library(nhlscraper)
 library(tidyverse)

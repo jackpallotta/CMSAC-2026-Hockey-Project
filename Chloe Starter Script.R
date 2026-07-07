@@ -365,4 +365,6 @@ situationalFaceoffs |>
   fmt_number(use_seps = TRUE,
              decimals = 0) |>
   tab_header(title = 'Number of Faceoffs by Score State')
+
+###
   

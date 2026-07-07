@@ -40,3 +40,5 @@ schedule <- seasons |>
 
 saveRDS(schedule, "schedule.rds")
 schedule <- readRDS("/Users/jackpallotta/Desktop/schedule.rds")
+
+

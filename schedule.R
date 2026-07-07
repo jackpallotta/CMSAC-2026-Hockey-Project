@@ -31,14 +31,22 @@ schedule <- seasons |>
       })
   }) |>
   filter(gameType == 2) |>
-  rename(gameId = id, awayTeamCode = awayTeam.abbrev, awayTeamId = awayTeam.id, 
-         homeTeamCode = homeTeam.abbrev, homeTeamId = homeTeam.id) |>
+  rename(gameId = id,
+    awayTeamCode = awayTeam.abbrev, awayTeamId = awayTeam.id, awayScore = awayTeam.score,
+    homeTeamCode = homeTeam.abbrev, homeTeamId = homeTeam.id, homeScore = homeTeam.score) |>
   distinct(gameId, .keep_all = TRUE) |>
   arrange(gameId) |>
-  select(gameId, season, gameType, gameDate, awayTeamCode, awayTeamId,
-         homeTeamCode, homeTeamId)
+  mutate(winningTeamId = case_when(
+      homeScore > awayScore ~ homeTeamId,
+      awayScore > homeScore ~ awayTeamId,
+      TRUE ~ NA_integer_)) |>
+  select(gameId, season, gameType, gameDate, awayTeamCode, awayTeamId, awayScore,
+    homeTeamCode, homeTeamId, homeScore, winningTeamId)
 
 saveRDS(schedule, "schedule.rds")
+<<<<<<< HEAD
 schedule <- readRDS("/Users/jackpallotta/Desktop/schedule.rds")
 
 
+=======
+>>>>>>> 662218e85d37f7ee501a411115723cf00026e76e

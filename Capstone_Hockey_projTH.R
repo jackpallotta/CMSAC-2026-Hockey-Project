@@ -161,7 +161,7 @@ events_after_faceoff |>
 #Play by play Official----
 #pbp pulled from Jack
 #pulls the first five seconds after a face-off
-pbp_faceoffs = pbp |>
+pbp_faceoffs = pbp_cleaned |>
   mutate(row_id = row_number()) |>
   filter(eventTypeDescKey == "faceoff") |>
   select(faceoff_row = row_id,
@@ -179,7 +179,63 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_time < secondsElapsedInGame,   
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
-  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal"))
+  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal")) |>
+  mutate(faceoffDotCategory = case_when(xCoord == -69 & yCoord == 22 ~ '1',
+                                        xCoord == -20 & yCoord == 22 ~ '2',
+                                        xCoord == 20 & yCoord == 22 ~ '3',
+                                        xCoord == 69 & yCoord == 22 ~ '4',
+                                        xCoord == -69 & yCoord == -22 ~ '5',
+                                        xCoord == -20 & yCoord == -22 ~ '6',
+                                        xCoord == 20 & yCoord == -22 ~ '7',
+                                        xCoord == 69 & yCoord == -22 ~ '8',
+                                        xCoord == 0 & yCoord == 0 ~ '0')) |>
+  mutate(scoreState = as.factor(case_when(scoreState >= 4 | scoreState <= -4 ~ '+/- 4 or greater',
+                                scoreState %in% c(-3,3) ~ '+/- 3',
+                                scoreState %in% c(-2,2) ~ '+/- 2',
+                                scoreState %in% c(-1,1) ~ '+/- 1',
+                                scoreState == 0 ~ '0'))) |>
+  mutate(leftRight = as.factor(case_when(homeTeamDefendingSide == 'left' & eventTeamVenue == 'home'~
+                                 if_else(faceoffDotCategory %in% c('1','2','3','4'),'L','R'),
+                               homeTeamDefendingSide == 'left' & eventTeamVenue == 'away'~
+                                 if_else(faceoffDotCategory %in% c('5','6','7','8'),'L','R'),
+                               homeTeamDefendingSide == 'right' & eventTeamVenue == 'home'~
+                                 if_else(faceoffDotCategory %in% c('5','6','7','8'),'L','R'),
+                               homeTeamDefendingSide == 'right' & eventTeamVenue == 'away'~
+                                 if_else(faceoffDotCategory %in% c('1','2','3','4'),'L','R')))) |>
+  mutate(zoneCode = as.factor(if_else(zoneCode == 'N' & faceoffDotCategory != 'C',
+                            case_when(homeTeamDefendingSide == 'left' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('2','6') ~ 
+                                        'C-NZ',
+                                      homeTeamDefendingSide == 'left' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('3','7') ~
+                                        'F-NZ',
+                                      homeTeamDefendingSide == 'left' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('2','6') ~
+                                        'F-NZ',
+                                      homeTeamDefendingSide == 'left' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('3','7') ~
+                                        'C-NZ',
+                                      homeTeamDefendingSide == 'right' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('2','6') ~
+                                        'F-NZ',
+                                      homeTeamDefendingSide == 'right' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('3','7') ~
+                                        'C-NZ',
+                                      homeTeamDefendingSide == 'right' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('2','6') ~
+                                        'C-NZ',
+                                      homeTeamDefendingSide == 'right' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('3','7') ~
+                                        'F-NZ'),zoneCode))) |>
+  mutate(zoneCode = if_else(zoneCode == 'N','C', zoneCode))|>
+  mutate(situationDescriptor = as.factor(case_when(is.na(zoneCode) | is.na(leftRight) ~ NA_character_,
+                                        TRUE ~ paste(zoneCode, leftRight, sep = ' ')))) |>
+  mutate(situationLinkage = as.factor(case_when(situationDescriptor %in% c('D L', 'O R') ~
+                                        'A',
+                                      situationDescriptor %in% c('D R', 'O L') ~
+                                        'B',
+                                      situationDescriptor %in% c('F-NZ R', 'C-NZ L') ~
+                                        'C',
+                                      situationDescriptor %in% c('F-NZ L', 'C-NZ R') ~
+                                        'D',
+                                      situationDescriptor == 'C R' ~
+                                        'E'))) |>
+  mutate(periodNumber = as.factor(periodNumber)) |>
+  filter(periodType == "REG")
+
+
 #mutate shot attempts looking at missed, shots on goal, and goal
 
 events_after_faceoff2 = events_after_faceoff2 |> mutate(zoneCode = fct_relevel(zoneCode, "N"))
@@ -211,13 +267,19 @@ gam.mod = gam(is_shot_atmpt~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance
            data = events_after_faceoff2, family = binomial(link = logit) , method = "REML")
 summary(gam.mod)
 
-gam.mod2 = gam(fo_success~s(zoneCode, bs = "re") + s(xCoordNorm) + s(distance) + s(xG),
+gam.mod2 = gam(is_shot_atmpt~s(situationDescriptor, bs = "re") + s(xCoordNorm) + s(distance),
                data = events_after_faceoff2, family = binomial(link=logit), method = "REML")
 summary(gam.mod2)
 
-gam.mod3 = gam(is_shot_atmpt ~ s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + s(periodNumber, bs = "re"),
+gam.mod3 = gam(is_shot_atmpt ~  s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + s(periodNumber, bs = "re"),
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod3)$s.table
+
+gam.mod4 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + 
+                 s(periodNumber, bs = "re") + s(angle) + s(isEmptyNetFor, isEmptyNetAgainst, bs = "re"),
+               data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
+summary(gam.mod4)
+
 
 #looking at glmm models (Absolute trash)
 glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
@@ -239,6 +301,8 @@ require(broom)
 tidy(mod3, exponentiate = TRUE, conf.int = TRUE)
 tidy(mod4, exponentiate = TRUE, conf.int = TRUE)
 
+tidy(gam.mod4, exponentiate = TRUE, conf.int = TRUE)
+
 #library(gtsummary)
 #tbl_regression(mod3, exponentiate = TRUE)
 
@@ -248,15 +312,21 @@ mod3_pred_prob = predict(mod3, type = "response")
 mod4_pred_prob = predict(mod4, type = "response") 
 #for every obs the pred prob of winning
 
+gam.mod4_pred_prob = predict(gam.mod4, type = "response") 
+
 mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
 
 mod4_pred_class = ifelse(mod4_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
 
+gam.mod4_pred_class = ifelse(gam.mod4_pred_prob > 0.5, "Win", "Loss") 
+
 mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
 
 mod4_pred_binary = ifelse(mod4_pred_prob > 0.5, 1, 0)
+
+gam.mod4_pred_binary = ifelse(gam.mod4_pred_prob > 0.5, 1, 0)
 
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
@@ -269,16 +339,38 @@ mean((mod3_pred_binary - mod3_pred_prob)^2)
 #BRIER scorte extremly low of 0.0024
 mean((mod4_pred_binary - mod4_pred_prob)^2)
 
+#pretty solid BRIER Score of 0.096
+mean((gam.mod4_pred_binary - gam.mod4_pred_prob)^2)
 
-#attempt at checking the ROC of mod4
-#library(pROC)
-#want the area under the roc curve to be as large as possible
-#filtered = events_after_faceoff2 |> 
-#  filter(!is.na(xG), !is.na(zoneCode), !is.na(xCoordNorm), !is.na(distance)) |>
-#  mutate(pred_prob = predict(mod4, type = "response"))
-#mod4_roc = roc(response = filtered$result, predicted = filtered$pred_prob)
-# str(cricket_roc)
-#mod4_roc$auc
+
+shot_results = events_after_faceoff2 |>
+  select(is_shot_atmpt, leftRight,zoneCode, xCoordNorm, yCoordNorm,distance, 
+         periodNumber, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  drop_na() |>
+  mutate(shot_prob = predict(gam.mod4, type = "response"),
+         pred_decile2 = ntile(shot_prob, 10))
+
+shot_calibration_check =  shot_results |>
+  group_by(pred_decile2) |>
+  summarize(
+    predicted = mean(shot_prob),
+    actual = mean(is_shot_atmpt),
+    n = n(),
+    .groups = "drop")
+
+shot_calibration_check #only slightly off
+
+roc_obj2 = roc(
+  response = shot_results$is_shot_atmpt,
+  predictor = shot_results$shot_prob,
+  quiet = TRUE)
+
+auc(roc_obj2) #AUC is 0.828
+
+mean((shot_results$is_shot_atmpt - shot_results$shot_prob)^2)
+
+#attempt at checking the ROC 
+library(pROC)
 
 
 #attempt at drawing shots on goal and goals on nhl rink
@@ -352,3 +444,6 @@ round(prop.table(table(events_after_faceoff2$is_shot_atmpt,
 
 table(events_after_faceoff2$eventOwnerTeamId)
 
+round(prop.table(table(events_after_faceoff2$is_shot_atmpt,
+                       events_after_faceoff2$eventOwnerTeamId,
+                       events_after_faceoff2$faceoffDotCategory), margin = c(2,3)), 3)

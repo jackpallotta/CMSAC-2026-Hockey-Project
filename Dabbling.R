@@ -4,39 +4,21 @@
 
 ## (just for fun!)
 
-usethis::use_git_config(user.name = "chloeguagliano", 
-                        user.email = "chloeguagliano@gmail.com")
-usethis::create_github_token()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Let's get started!
 library(nhlscraper)
 library(tidyverse)
 library(dplyr)
 library(purrr)
 library(gtsummary)
 library(broom)
+library(forcats)
 
 ## filtering pbp so there's only goals
 goalEvents = pbp |>
   filter(eventTypeDescKey == 'goal') |>
-  select(gameId, periodType, secondsElapsedInGame, eventOwnerTeamId, eventTeamVenue, scoreState) |>
+  mutate(secondsRemainingInGame = 3600 - secondsElapsedInGame) |>
+  mutate(minutesElapsedInGame = secondsElapsedInGame / 60) |>
+  select(gameId, periodType, secondsElapsedInGame, minutesElapsedInGame, secondsRemainingInGame, eventOwnerTeamId, eventTeamVenue, scoreState) |>
   group_by(gameId) |>
   mutate(gameWinner = names(which.max(table(eventTeamVenue)))) |>
   mutate(scoringTeamWin = if_else(gameWinner == eventTeamVenue,
@@ -50,16 +32,83 @@ nonRegulationGoalEvents = goalEvents |>
 gamesWithOvertime = as.list(unique(nonRegulationGoalEvents$gameId))
 
 goalEvents = goalEvents |>
-  filter(! (gameId %in% gamesWithOvertime)) |>
+  filter(! (gameId %in% gamesWithOvertime)) 
 
-## fitting an initial log model (scoreState, secondsElapsedInGame, no interaction)
-basic_logit = glm(scoringTeamWin ~ secondsElapsedInGame + scoreState, 
-                  data = goalEvents, family = binomial)
+goalEvents = goalEvents |>
+  mutate(scoreState = case_when(scoreState >= 4 ~ 4,
+                                scoreState <= -4 ~ -4,
+                                scoreState > -4 & scoreState < 4 ~ scoreState)) |>
+  mutate(scoreStateGroup = as.character(scoreState)) |>
+  mutate(scoreStateGroup = case_when(scoreStateGroup == '4' ~ 'GE_4',
+                   scoreStateGroup == '-4' ~ 'LE_-4',
+                   !(scoreStateGroup %in% c('-4','4')) ~ scoreStateGroup)) |>
+  mutate(scoreStateGroup = as.factor(scoreStateGroup)) |>
+  mutate(scoreStateGroup = relevel(scoreStateGroup, ref = "0"))
 
-tidy(basic_logit, conf.int = TRUE, exponentiate = TRUE) |>
-  mutate(p.value = formatC(p.value, format = "f", digits = 3))
 
-tbl_regression(basic_logit, exponentiate = TRUE)
+######## TESTING OTHER VARIATIONS OF THE BASE MODEL
+set.seed(91)
+N_FOLDS <- 5 # how do you choose number of folds for cross-validation?
+goalEvents = goalEvents |>
+  mutate(fold = sample(rep(1:N_FOLDS, length.out = n())))
+
+table(goalEvents$fold)
+
+goalEvents_cv = function(x) {
+  
+  # get test and training data:
+  test_data = goalEvents |> filter(fold == 5)                     
+  train_data = goalEvents |> filter(fold != 5)
+  
+  ## inital basic model (scoreState, secondsElapsed, no interaction)
+  basic_logit = glm(scoringTeamWin ~ secondsElapsedInGame + scoreStateGroup, 
+                    data = train_data, family = binomial)
+  
+  ## initial basic model with minutesElapsed instead of seconds
+  basic_logitMinutes = glm(scoringTeamWin ~ minutesElapsedInGame + scoreStateGroup,
+                           data = train_data, family = binomial)
+  
+  ## base model B (scoreState, timeRemaining, no interaction)
+  base_logit_b = glm(scoringTeamWin ~ secondsRemainingInGame + scoreStateGroup, 
+                     data = train_data, family = binomial)
+  
+  ## base model C (scoreState, secondsElapsed, w/ interaction)
+  base_logit_c = glm(scoringTeamWin ~ secondsElapsedInGame * scoreStateGroup, 
+                     data = train_data, family = binomial)
+  
+  ## base model D (scoreState, secondsRemaining w/ interaction)
+  base_logit_d = glm(scoringTeamWin ~ secondsRemainingInGame * scoreStateGroup,
+                     data = train_data, family = binomial)
+  
+  # return test results:
+  out = list(
+    predictions = tibble(
+    basicLogit_pred = predict(basic_logit, newdata = test_data, type = 'response'),
+    basicLogitMinutes_pred = predict(basic_logitMinutes, newdata = test_data, type = 'response'),
+    baseLogitB_pred = predict(base_logit_b, newdata = test_data, type = 'response'),
+    baseLogitC_pred = predict(base_logit_c, newdata = test_data, type = 'response'),
+    baseLogitD_pred = predict(base_logit_d, newdata = test_data, type = 'response'),
+    test_actual = test_data$scoringTeamWin,
+    test_fold = 5
+  ),
+  modelC = base_logit_c)
+  return(out)
+}
+
+
+results = goalEvents_cv(goalEvents)
+base_logit_c = results$modelC
+
+
+results$predictions |>
+  group_by(test_fold) |>
+  summarise(
+    basicModel_brier = mean((basicLogit_pred - test_actual)^2),
+    basicModelMinutes_brier = mean((basicLogitMinutes_pred - test_actual)^2),
+    baseModelB_brier = mean((baseLogitB_pred - test_actual)^2),
+    baseModelC_brier = mean((baseLogitC_pred - test_actual)^2),
+    baseModelD_brier = mean((baseLogitD_pred - test_actual)^2)
+  )
 
 
 ##### DON'T DERIVE ANY ACC RESULTS FROM THIS UNTIL THE LOGIT MODEL IS 
@@ -71,74 +120,76 @@ tbl_regression(basic_logit, exponentiate = TRUE)
 ## (see notebook for full conceptual explanation)
 prediction_grid = expand.grid(
   secondsElapsedInGame = seq(0, 3600, by = 60),
-  scoreState = -5:5
+  scoreStateGroup = levels(goalEvents$scoreStateGroup)
 )
 
 prediction_grid$winProb = predict(
-  basic_logit,
+  base_logit_c,
   newdata = prediction_grid,
   type = "response"
 )
 
+scoreTransitions = tibble(
+  scoreStateGroup = c(
+    'LE_-4','-3','-2','-1','0','1','2','3','GE_4'),
+  nextScoreStateGroup = c(
+    '-3','-2','-1','0','1','2','3','GE_4','GE_4')
+)
+
 goalValues = prediction_grid |>
-  mutate(scoreState = as.numeric(scoreState)) |>
+  left_join(scoreTransitions, by = 'scoreStateGroup') |>
   left_join(
     prediction_grid |>
       transmute(
         secondsElapsedInGame,
-        scoreState = scoreState - 1,
+        scoreStateGroup,
         winProb_afterGoal = winProb
       ),
-    by = c('secondsElapsedInGame', 'scoreState')
+    by = c(
+      'secondsElapsedInGame',
+      'nextScoreStateGroup' = 'scoreStateGroup'
+    )
   ) |>
-  mutate(goalValue = winProb_afterGoal - winProb)
+  mutate(goalValue = winProb_afterGoal - winProb) |>
+  arrange(desc(goalValue))
 
 
-## good plot to make conceptually; need to adjust base model operating
-## behind the scenes here and undergo proper model testing -> hope is this will be 
-## a good alternative to showing the table w/ goalVal arranged descending
+## line graph: win probability over time by score state
+## (see distance between lines at given timeElapsed)
 prediction_grid |>
-  ggplot(aes(x = secondsElapsedInGame, y = winProb, color = factor(scoreState),
-             group = scoreState)) + 
+  ggplot(aes(x = secondsElapsedInGame, y = winProb, color = factor(scoreStateGroup),
+             group = scoreStateGroup)) + 
   geom_point() + 
-  geom_line()
+  geom_line() +
+  labs(x = 'Seconds Elapsed In Game',
+       y = 'Win Probability',
+       color = 'scoreState',
+       title = 'Win Probability Over Time by Score State')
 
-######## TESTING OTHER VARIATIONS OF THE BASE MODEL
-set.seed(91)
-N_FOLDS <- 5 # how do you choose number of folds for cross-validation?
-goalEvents = goalEvents |>
-  mutate(fold = sample(rep(1:N_FOLDS, length.out = n())))
+## bar chart comparing average goalValue by score state
+goalValues |>
+  select(scoreStateGroup, nextScoreStateGroup, goalValue) |>
+  group_by(scoreStateGroup) |>
+  mutate(averageGoalValue = mean(goalValue)) |>
+  distinct(scoreStateGroup, nextScoreStateGroup, averageGoalValue) |>
+  arrange(desc(averageGoalValue)) |>
+  ggplot(aes(x = fct_reorder(nextScoreStateGroup, desc(averageGoalValue)), y = averageGoalValue)) + 
+  geom_col() + 
+  labs(x = 'Score State Achieved',
+       y = 'Average Goal Value',
+       title = 'Average Goal Value by Score State Achieved')
 
-table(goalEvents$fold)
+## want to see box plots / spread of goalValue for each scoreState achieved over time
+goalValues |>
+  group_by(nextScoreStateGroup) |>
+  ggplot(aes(x = fct_relevel(nextScoreStateGroup,'-3','-2','-1','0','1','2','3','GE_4'), 
+                             y = goalValue, fill = nextScoreStateGroup)) +
+  geom_boxplot()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-######## (Model C and D -> interaction and timeRemaining changes)
-
-## fitting base model C (scoreState, secondsElapsedInGame, no interaction)
-base_logit_c = glm(scoringTeamWin ~ secondsElapsedInGame * scoreState, 
-                  data = goalEvents, family = binomial)
-
-tidy(base_logit_c, conf.int = TRUE, exponentiate = TRUE)
-  # mutate(p.value = formatC(p.value, format = "f", digits = 3))
-  
-
-
-tbl_regression(base_logit_c, exponentiate = TRUE)
-
-
-
+## line chart of how value of a scoreState achieved changes over timeElapsed
+goalValues |>
+  group_by(nextScoreStateGroup) |>
+  ggplot(aes(x = secondsElapsedInGame, y = goalValue, color = factor(nextScoreStateGroup))) +
+  geom_point() + 
+  geom_line() + 
+  facet_wrap(~factor(nextScoreStateGroup), scales = "free_x")

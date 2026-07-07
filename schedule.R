@@ -44,3 +44,9 @@ schedule <- seasons |>
     homeTeamCode, homeTeamId, homeScore, winningTeamId)
 
 saveRDS(schedule, "schedule.rds")
+<<<<<<< HEAD
+schedule <- readRDS("/Users/jackpallotta/Desktop/schedule.rds")
+
+
+=======
+>>>>>>> 662218e85d37f7ee501a411115723cf00026e76e

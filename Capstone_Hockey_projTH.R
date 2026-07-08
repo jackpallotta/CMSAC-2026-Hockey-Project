@@ -219,7 +219,7 @@ events_after_faceoff2 = pbp_faceoffs |>
                                         'C-NZ',
                                       homeTeamDefendingSide == 'right' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('3','7') ~
                                         'F-NZ'),zoneCode))) |>
-  mutate(zoneCode = if_else(zoneCode == 'N','C', zoneCode))|>
+  mutate(zoneCode = as.factor(if_else(zoneCode == 'N','C', zoneCode)))|>
   mutate(situationDescriptor = as.factor(case_when(is.na(zoneCode) | is.na(leftRight) ~ NA_character_,
                                         TRUE ~ paste(zoneCode, leftRight, sep = ' ')))) |>
   mutate(situationLinkage = as.factor(case_when(situationDescriptor %in% c('D L', 'O R') ~
@@ -233,6 +233,8 @@ events_after_faceoff2 = pbp_faceoffs |>
                                       situationDescriptor == 'C R' ~
                                         'E'))) |>
   mutate(periodNumber = as.factor(periodNumber)) |>
+  mutate(isEmptyNetFor = as.factor(isEmptyNetFor)) |>
+  mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
   filter(periodType == "REG")
 
 
@@ -273,10 +275,10 @@ summary(gam.mod2)
 
 gam.mod3 = gam(is_shot_atmpt ~  s(zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + s(periodNumber, bs = "re"),
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
-summary(gam.mod3)$s.table
+summary(gam.mod3)#$s.table
 
 gam.mod4 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + 
-                 s(periodNumber, bs = "re") + s(angle) + s(isEmptyNetFor, isEmptyNetAgainst, bs = "re"),
+                 s(periodNumber, bs = "re") + s(angle) + s(isEmptyNetFor,isEmptyNetAgainst, bs = "re"),
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod4)
 
@@ -288,7 +290,7 @@ summary(glmm.mod)
 
 require(bbmle)
 #gam.mod2 is currently the best, overall it is looking like the best predictor variable might be fo_success
-AICtab(mod3, mod4,gam.mod, gam.mod2, gam.mod3, glmm.mod, base=TRUE, sort=TRUE)
+AICtab(mod3, mod4,gam.mod, gam.mod2, gam.mod3, gam.mod4, glmm.mod, base=TRUE, sort=TRUE)
 
 #likelihood ratio test for mod3
 Anova(mod3, type="II", test = "LR")
@@ -369,8 +371,20 @@ auc(roc_obj2) #AUC is 0.828
 
 mean((shot_results$is_shot_atmpt - shot_results$shot_prob)^2)
 
-#attempt at checking the ROC 
+
+
+#creating an ROC graph of gam.mod4
 library(pROC)
+
+shot_roc = tibble(threshold = c(roc_obj2$thresholds),
+                  specificity = roc_obj2$specificities,
+                  sensitivity = roc_obj2$sensitivities)#a goal is actually detected as a goal 
+
+shot_roc |> 
+  ggplot(aes(x = 1 - specificity , y = sensitivity)) + #1-specificity (false pos. rate)
+  geom_path() +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed")
 
 
 #attempt at drawing shots on goal and goals on nhl rink

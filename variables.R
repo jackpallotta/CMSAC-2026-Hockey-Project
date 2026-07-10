@@ -282,7 +282,7 @@ faceoffsCleaned <- faceoffs |>
   select(seasonId, gameId, gameDate, eventId, periodNumber,
          secondsRemaining, minutesRemaining, isOT, eventTypeDescKey, eventTeamVenue, teamDefendingSide,
          strengthState, isEmptyNetFor, isEmptyNetAgainst, skaterCountFor, skaterCountAgainst,
-         manDifferential, goalDifferential, coordinates, faceoffDotCategory, 
+         manDifferential, goalDifferential, coordinates, zoneCode, faceoffDotCategory, 
          faceoffSituation, faceoffPlayerId, player, shoots, strongSide, stickDownFirst, age, 
          faceoffGameCount, seasonFaceoffCount, seasonGameNumber, careerGameNumber, faceoffWon,
          USATFor5, USATAgainst5, USATCountFor5, USATCountAgainst5, xGFor5, xGAgainst5,

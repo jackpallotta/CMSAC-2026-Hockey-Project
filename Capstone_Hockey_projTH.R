@@ -12,6 +12,8 @@ require(lme4)
 
 theme_set(theme_bw())
 
+faceoffs_cleaned = readRDS("faceoffsCleaned.rds")
+
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
 
@@ -238,7 +240,7 @@ events_after_faceoff2 = pbp_faceoffs |>
   filter(periodType == "REG")
 
 
-#mutate shot attempts looking at missed, shots on goal, and goal
+#Following Models and code looking at model accuracy (ROC and AUC) all for the question do Face-offs matter
 
 events_after_faceoff2 = events_after_faceoff2 |> mutate(zoneCode = fct_relevel(zoneCode, "N"))
 
@@ -282,6 +284,13 @@ gam.mod4 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoordNorm)
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod4)
 
+gam.mod5 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoord) + s(yCoord) +  s(distance) +
+                 s(secondsElapsedInGame) + s(strengthState, bs = "re" ) + s(angle)+
+                 s(isEmptyNetFor,isEmptyNetAgainst, bs = "re"),
+               data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
+summary(gam.mod5)
+
+
 
 #looking at glmm models (Absolute trash)
 glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
@@ -314,7 +323,7 @@ mod3_pred_prob = predict(mod3, type = "response")
 mod4_pred_prob = predict(mod4, type = "response") 
 #for every obs the pred prob of winning
 
-gam.mod4_pred_prob = predict(gam.mod4, type = "response") 
+gam.mod5_pred_prob = predict(gam.mod5, type = "response") 
 
 mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
@@ -322,13 +331,13 @@ mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss")
 mod4_pred_class = ifelse(mod4_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
 
-gam.mod4_pred_class = ifelse(gam.mod4_pred_prob > 0.5, "Win", "Loss") 
+gam.mod5_pred_class = ifelse(gam.mod5_pred_prob > 0.5, "Win", "Loss") 
 
 mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
 
 mod4_pred_binary = ifelse(mod4_pred_prob > 0.5, 1, 0)
 
-gam.mod4_pred_binary = ifelse(gam.mod4_pred_prob > 0.5, 1, 0)
+gam.mod5_pred_binary = ifelse(gam.mod5_pred_prob > 0.5, 1, 0)
 
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
@@ -341,15 +350,15 @@ mean((mod3_pred_binary - mod3_pred_prob)^2)
 #BRIER scorte extremly low of 0.0024
 mean((mod4_pred_binary - mod4_pred_prob)^2)
 
-#pretty solid BRIER Score of 0.096
-mean((gam.mod4_pred_binary - gam.mod4_pred_prob)^2)
+#pretty solid BRIER Score of 0.096 for gam.mod4, brier score of 0.097 for gam.mod5
+mean((gam.mod5_pred_binary - gam.mod5_pred_prob)^2)
 
 
 shot_results = events_after_faceoff2 |>
-  select(is_shot_atmpt, leftRight,zoneCode, xCoordNorm, yCoordNorm,distance, 
+  select(is_shot_atmpt, leftRight,zoneCode, xCoord, yCoord,distance, 
          periodNumber, angle, isEmptyNetFor, isEmptyNetAgainst) |>
   drop_na() |>
-  mutate(shot_prob = predict(gam.mod4, type = "response"),
+  mutate(shot_prob = predict(gam.mod5, type = "response"),
          pred_decile2 = ntile(shot_prob, 10))
 
 shot_calibration_check =  shot_results |>

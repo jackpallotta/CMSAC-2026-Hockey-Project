@@ -143,6 +143,26 @@ faceoffs <- faceoffs |>
       pmax(3900 - secondsElapsedInGame, 0), NA_real_),
     minutesRemainingOT = secondsRemainingOT / 60)
 
+# coalesce reg and OT
+faceoffs <- faceoffs |>
+  mutate(secondsRemaining = coalesce(na_if(secondsRemainingReg, 0), secondsRemainingOT),
+    minutesRemaining = coalesce(na_if(minutesRemainingReg, 0), minutesRemainingOT))
+
+# create overtime binary variable
+faceoffs <- faceoffs |>
+  mutate(isOT = case_when(
+    periodType == "REG" ~ 0,
+    periodType == "OT" ~ 1))
+
+# change empty net variables to binary
+faceoffs <- faceoffs |>
+  mutate(isEmptyNetFor = as.integer(isEmptyNetFor),
+         isEmptyNetAgainst = as.integer(isEmptyNetAgainst))
+
+# update man differential variables to include extra attackers for empty nets
+faceoffs <- faceoffs |>
+  mutate(manDifferential = skaterCountFor - skaterCountAgainst)
+
 faceoffs <- faceoffs |>
   arrange(seasonId, gameDate, gameId, eventId)
 
@@ -259,11 +279,10 @@ faceoffs <- faceoffs |>
 
 # clean the dataset and select desired varaibles for modeling
 faceoffsCleaned <- faceoffs |>
-  select(seasonId, gameId, gameDate, eventId, periodNumber, periodType,
-         minutesRemainingReg, secondsRemainingReg, minutesRemainingOT,
-         secondsRemainingOT, eventTypeDescKey, eventTeamVenue, teamDefendingSide,
+  select(seasonId, gameId, gameDate, eventId, periodNumber,
+         secondsRemaining, minutesRemaining, isOT, eventTypeDescKey, eventTeamVenue, teamDefendingSide,
          strengthState, isEmptyNetFor, isEmptyNetAgainst, skaterCountFor, skaterCountAgainst,
-         manDifferential, goalDifferential, zoneCode, coordinates, faceoffDotCategory, 
+         manDifferential, goalDifferential, coordinates, faceoffDotCategory, 
          faceoffSituation, faceoffPlayerId, player, shoots, strongSide, stickDownFirst, age, 
          faceoffGameCount, seasonFaceoffCount, seasonGameNumber, careerGameNumber, faceoffWon,
          USATFor5, USATAgainst5, USATCountFor5, USATCountAgainst5, xGFor5, xGAgainst5,

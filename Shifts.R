@@ -1,14 +1,22 @@
-##
+## Shift Chart Info for Full Dataset
 
-schedule <- readRDS("schedule.rds")
+library(tidyverse)
+library(nhlscraper)
 
-gameIDs <- schedule |>
+
+schedule = readRDS("schedule.rds")
+
+gameIDs = schedule |>
   pull(gameId)
 
-shifts <- gameIDs |>
+shifts = gameIDs |>
   map_dfr(\(id) {
     message("Extracting game ", id, " shifts")
     
     shift_chart(game = id) |>
       mutate(gameId = id, .before = 1)
   })
+
+saveRDS(shifts, "shifts.rds")
+shifts = readRDS("shifts.rds")
+rm(list=ls())

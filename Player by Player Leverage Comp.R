@@ -103,3 +103,157 @@ clean_faceoffInfo |>
   gt()
 
 
+
+## making comparative plots for Dylan Strome and Phillip Danault across the 
+## variables: goal differential, time remaining, faceoff location & strength state
+
+## goal is to show that there are differences / nuances that go beyond the FOW%
+## and total number of faceoffs taken; not necessarily making a judgement about
+## which player is better right now -> its a segment to bridge understanding
+
+
+## faceoff success by location comparison
+strome = situationalFaceoffs |>
+  filter(winningPlayerId %in% c('8478440') | losingPlayerId %in% c('8478440'))
+
+danault = situationalFaceoffs |>
+  filter(winningPlayerId %in% c('8476479') | losingPlayerId %in% c('8476479'))
+
+stromeWins = strome |>
+  select(situationDescriptor, winningPlayerId, losingPlayerId) |>
+  filter(winningPlayerId == '8478440') |>
+  count(situationDescriptor) |>
+  mutate(situationDescriptor = if_else(situationDescriptor == 'C right',
+                 'Center',
+                 situationDescriptor)) |>
+  arrange(desc(n)) |>
+  rename(faceoffWins = n)
+
+stromeLosses = strome |>
+  select(situationDescriptor, winningPlayerId, losingPlayerId) |>
+  filter(losingPlayerId == '8478440') |>
+  count(situationDescriptor) |>
+  mutate(situationDescriptor = if_else(situationDescriptor == 'C right',
+                                       'Center',
+                                       situationDescriptor)) |>
+  arrange(desc(n)) |>
+  rename(faceoffLosses = n)
+  
+stromeBySituation = left_join(stromeWins, stromeLosses, by = 'situationDescriptor')
+
+stromeBySituation = stromeBySituation |>
+  mutate(stromeWinPct = faceoffWins / (faceoffWins + faceoffLosses),
+         totalFaceoffs = faceoffWins + faceoffLosses) |>
+  arrange(desc(stromeWinPct)) |>
+  select(situationDescriptor, stromeWinPct)
+
+stromeBySituation
+
+
+
+danaultWins = danault |>
+  select(situationDescriptor, winningPlayerId, losingPlayerId) |>
+  filter(winningPlayerId == '8476479') |>
+  count(situationDescriptor) |>
+  mutate(situationDescriptor = if_else(situationDescriptor == 'C right',
+                                       'Center',
+                                       situationDescriptor)) |>
+  arrange(desc(n)) |>
+  rename(faceoffWins = n)
+
+danaultLosses = danault |>
+  select(situationDescriptor, winningPlayerId, losingPlayerId) |>
+  filter(losingPlayerId == '8476479') |>
+  count(situationDescriptor) |>
+  mutate(situationDescriptor = if_else(situationDescriptor == 'C right',
+                                       'Center',
+                                       situationDescriptor)) |>
+  arrange(desc(n)) |>
+  rename(faceoffLosses = n)
+
+danaultBySituation = left_join(danaultWins, danaultLosses, by = 'situationDescriptor')
+
+danaultBySituation = danaultBySituation |>
+  mutate(danaultWinPct = faceoffWins / (faceoffWins + faceoffLosses),
+         totalFaceoffs = faceoffWins + faceoffLosses) |>
+  arrange(desc(danaultWinPct)) |>
+  select(situationDescriptor, danaultWinPct)
+
+danaultBySituation
+
+
+
+compBySituation = left_join(stromeBySituation, danaultBySituation, by = 'situationDescriptor')
+compBySituation |>
+  pivot_longer(
+    cols = c(stromeWinPct, danaultWinPct),
+    names_to = "player",
+    values_to = "faceoffPct"
+  ) |>
+  mutate(player = recode(player,
+                         stromeWinPct = "Strome",
+                         danaultWinPct = "Danault")) |>
+  ggplot(aes(x = situationDescriptor, y = faceoffPct, fill = player)) +
+  geom_col(position = 'dodge') + 
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = 'SituationDescriptor', 
+       y = 'Faceoff Win Percentage',
+       fill = 'Player')
+
+
+
+## faceoff success by strength state comparison plot
+danaultStateWins = danault |>
+  filter(winningPlayerId == '8476479') |>
+  select(strengthState, winningPlayerId, losingPlayerId) |>
+  count(strengthState) |>
+  rename(faceoffWins = n)
+
+danaultStateLosses = danault |>
+  filter(losingPlayerId == '8476479') |>
+  select(strengthState, winningPlayerId, losingPlayerId) |>
+  count(strengthState) |>
+  rename(faceoffLosses = n)
+
+danaultByState = left_join(danaultStateWins, danaultStateLosses, by = 'strengthState')
+danaultByState = danaultByState |>
+  mutate(danaultFaceoffPct = faceoffWins / (faceoffWins + faceoffLosses),
+         danaultTotalFaceoffs = faceoffWins + faceoffLosses) |>
+  select(strengthState, danaultFaceoffPct)
+
+stromeStateWins = strome |>
+  filter(winningPlayerId == '8478440') |>
+  select(strengthState, winningPlayerId, losingPlayerId) |>
+  count(strengthState) |>
+  rename(faceoffWins = n)
+
+stromeStateLosses = strome |>
+  filter(losingPlayerId == '8478440') |>
+  select(strengthState, winningPlayerId, losingPlayerId) |>
+  count(strengthState) |>
+  rename(faceoffLosses = n)
+
+stromeByState = left_join(stromeStateWins, stromeStateLosses, by = 'strengthState')
+stromeByState = stromeByState |>
+  mutate(stromeFaceoffPct = faceoffWins / (faceoffWins + faceoffLosses),
+         stromeTotalFaceoffs = faceoffWins + faceoffLosses) |>
+  select(strengthState, stromeFaceoffPct)
+
+
+
+
+
+
+
+
+
+danaultStateWins
+  
+
+  
+  
+  
+  
+
+

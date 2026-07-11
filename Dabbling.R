@@ -193,3 +193,4 @@ goalValues |>
   geom_point() + 
   geom_line() + 
   facet_wrap(~factor(nextScoreStateGroup), scales = "free_x")
+

@@ -284,13 +284,24 @@ gam.mod4 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoordNorm)
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod4)
 
-gam.mod5 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoord) + s(yCoord) +  s(distance) +
-                 s(secondsElapsedInGame) + s(strengthState, bs = "re" ) + s(angle)+
+gam.mod5 = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoord) + s(yCoord) + 
+                 s(distance) +s(secondsElapsedInGame)  + s(angle) + strengthState +
                  s(isEmptyNetFor,isEmptyNetAgainst, bs = "re"),
                data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
 summary(gam.mod5)
 
+gam.mod6 = gam(is_shot_atmpt ~ leftRight + zoneCode+  s(xCoord, yCoord) +
+                 s(distance) +s(secondsElapsedInGame) + s(angle) + strengthState +
+                 scoreState + isEmptyNetFor + isEmptyNetAgainst ,
+               data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
+summary(gam.mod6)
 
+
+bam.mod = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + 
+                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState:scoreState +
+                isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+              data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(bam.mod)
 
 #looking at glmm models (Absolute trash)
 glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
@@ -325,6 +336,7 @@ mod4_pred_prob = predict(mod4, type = "response")
 
 gam.mod5_pred_prob = predict(gam.mod5, type = "response") 
 
+
 mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
 
@@ -333,11 +345,13 @@ mod4_pred_class = ifelse(mod4_pred_prob > 0.5, "Win", "Loss")
 
 gam.mod5_pred_class = ifelse(gam.mod5_pred_prob > 0.5, "Win", "Loss") 
 
+
 mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
 
 mod4_pred_binary = ifelse(mod4_pred_prob > 0.5, 1, 0)
 
 gam.mod5_pred_binary = ifelse(gam.mod5_pred_prob > 0.5, 1, 0)
+
 
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
@@ -376,7 +390,9 @@ roc_obj2 = roc(
   predictor = shot_results$shot_prob,
   quiet = TRUE)
 
-auc(roc_obj2) #AUC is 0.828
+auc(roc_obj2)#AUC is 0.828
+
+
 
 mean((shot_results$is_shot_atmpt - shot_results$shot_prob)^2)
 
@@ -470,3 +486,4 @@ table(events_after_faceoff2$eventOwnerTeamId)
 round(prop.table(table(events_after_faceoff2$is_shot_atmpt,
                        events_after_faceoff2$eventOwnerTeamId,
                        events_after_faceoff2$faceoffDotCategory), margin = c(2,3)), 3)
+

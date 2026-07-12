@@ -18,7 +18,7 @@ pbp_faceoffs = pbp_cleaned |>
 
 events_after_faceoff2 = pbp_faceoffs |>
   inner_join(
-    pbp,
+    pbp_cleaned,
     by = join_by(
       gameId == gameId,
       periodNumber == periodNumber,
@@ -35,11 +35,11 @@ events_after_faceoff2 = pbp_faceoffs |>
                                         xCoord == 20 & yCoord == -22 ~ '7',
                                         xCoord == 69 & yCoord == -22 ~ '8',
                                         xCoord == 0 & yCoord == 0 ~ '0')) |>
-  mutate(scoreState = as.factor(case_when(scoreState >= 4 | scoreState <= -4 ~ '+/- 4 or greater',
-                                          scoreState %in% c(-3,3) ~ '+/- 3',
-                                          scoreState %in% c(-2,2) ~ '+/- 2',
-                                          scoreState %in% c(-1,1) ~ '+/- 1',
-                                          scoreState == 0 ~ '0'))) |>
+  mutate(scoreState = as.factor(case_when(goalDifferential >= 4 | goalDifferential <= -4 ~ '+/- 4 or greater',
+                                          goalDifferential %in% c(-3,3) ~ '+/- 3',
+                                          goalDifferential %in% c(-2,2) ~ '+/- 2',
+                                          goalDifferential %in% c(-1,1) ~ '+/- 1',
+                                          goalDifferential == 0 ~ '0'))) |>
   mutate(leftRight = as.factor(case_when(homeTeamDefendingSide == 'left' & eventTeamVenue == 'home'~
                                            if_else(faceoffDotCategory %in% c('1','2','3','4'),'L','R'),
                                          homeTeamDefendingSide == 'left' & eventTeamVenue == 'away'~
@@ -81,13 +81,15 @@ events_after_faceoff2 = pbp_faceoffs |>
   mutate(periodNumber = as.factor(periodNumber)) |>
   mutate(isEmptyNetFor = as.factor(isEmptyNetFor)) |>
   mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
+  mutate(strengthState = as.factor(strengthState)) |>
   filter(periodType == "REG")
 
 #Modeling probability of a shot attempt following a face-off
 #same model as gam.mod4 from Capstone_Hockey_projTH.R file
-nhl.mod = gam(is_shot_atmpt ~  s(leftRight,zoneCode, bs = "re") + s(xCoordNorm) + s(yCoordNorm) + s(distance) + 
-                 s(periodNumber, bs = "re") + s(angle) + s(isEmptyNetFor,isEmptyNetAgainst, bs = "re"),
-               data = events_after_faceoff2, family = binomial(link = logit), method = "REML")
+nhl.mod =  bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + s(distance, k = 20)+ 
+                 s(secondsElapsedInGame) + s(angle, k = 15) + strengthState:scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst , 
+               data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(nhl.mod)
 saveRDS(nhl.mod, "nhl_mod.rds")
 
@@ -96,15 +98,15 @@ nhl.mod_pred_prob = predict(nhl.mod, type = "response")
 nhl.mod_pred_class = ifelse(nhl.mod_pred_prob > 0.5, "Win", "Loss") 
 nhl.mod_pred_binary = ifelse(nhl.mod_pred_prob > 0.5, 1, 0)
 
-#pretty solid BRIER Score of 0.096
+#pretty solid BRIER Score of 0.086
 mean((nhl.mod_pred_binary - nhl.mod_pred_prob)^2)
 
 
 #checking the accuracy of the predictions of the shot probabilities
 #creating a new variable shot_prob of the probability of shots following a face-off
 shot_results = events_after_faceoff2 |>
-  select(is_shot_atmpt, leftRight,zoneCode, xCoordNorm, yCoordNorm,distance, 
-         periodNumber, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  select(is_shot_atmpt, xCoord, yCoord,distance, scoreState, strengthState,
+         secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
   drop_na() |>
   mutate(shot_prob = predict(nhl.mod, type = "response"),
          pred_decile2 = ntile(shot_prob, 10))
@@ -147,55 +149,86 @@ ui = fluidPage(
   titlePanel("NHL Faceoff Shot Probability"),
   sidebarLayout(
     sidebarPanel(
-      selectInput("leftRight", "Side of Ice", c("L", "R")),
-      selectInput("zoneCode", "Zone Code", c("O", "D", "C-NZ", "F-NZ")),
-      numericInput("xCoordNorm", "X Coordinates", min = -99, max = 99, value = 0, step = 1),
-      numericInput("yCoordNorm", "Y coordinates", min = -42, max = 42, value = 0, step = 1),
-      sliderInput("distance", "Distance", min = 1, max = 189.28, value = 1),
-      selectInput("periodNumber", "Period Number", c(1,2,3,4)),
-      sliderInput("angle", "Angle", min = 0, max = 180, value = 90),
       checkboxInput("isEmptyNetFor", "Net is Empty for Event Team", FALSE),
-      checkboxInput("isEmptyNetAgainst", "Net is Empty for Team Against Event", FALSE)),
+      checkboxInput("isEmptyNetAgainst", "Net is Empty for Team Against Event", FALSE),
+      numericInput("secondsElapsedInGame","Seconds Elapsed in Game",min = 0,max = 3600,value = 1200),
+      selectInput("strengthState","Strength State",choices = levels(events_after_faceoff2$strengthState)),
+      selectInput("scoreState","Score State",choices = levels(events_after_faceoff2$scoreState)),
     actionButton("predict", "Calculate Probability")),
   mainPanel(
-    h2(textOutput("probability"))))
+    plotOutput("rink",
+      click = "rink_click",
+      height = "600px"),
+    verbatimTextOutput("coords"),
+    h2(textOutput("probability")))))
 
 server = function(input, output) {
-  observeEvent(input$predict, {
+  #stores the selected faceoff location
+  coords = reactiveValues(x = NULL, y = NULL)
   
-  new_data = data.frame(
-    
-    leftRight = factor(
-      input$leftRight,
-      levels = levels(events_after_faceoff2$leftRight)),
-    
-    zoneCode = factor(
-      input$zoneCode,
-      levels = levels(events_after_faceoff2$zoneCode)),
-    
-    xCoordNorm = input$xCoordNorm,
-    yCoordNorm = input$yCoordNorm,
-    distance = input$distance,
-    angle = input$angle,
-    
-    periodNumber = factor(
-      input$periodNumber,
-      levels = levels(events_after_faceoff2$periodNumber)),
-    
-    isEmptyNetFor = factor(
-      input$isEmptyNetFor,
-      levels = levels(events_after_faceoff2$isEmptyNetFor)),
-    
-    isEmptyNetAgainst = factor(
-      input$isEmptyNetAgainst,
-      levels = levels(events_after_faceoff2$isEmptyNetAgainst)))
+  distance = reactive({
+    req(coords$x, coords$y)
+    sqrt((89 - coords$x)^2 + coords$y^2)})
   
-  prob = predict(nhl.mod, newdata = new_data, type = "response")
+  angle = reactive({
+    req(coords$x, coords$y)
+    atan2(abs(coords$y), 89 - coords$x) * 180 / pi})
   
-  output$probability <- renderText({
-    paste0(round(prob*100,1), "% chance of a shot attempt")
+  #draws the rink
+  output$rink = renderPlot({
+     draw_NHL_rink() +
+       coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43))
+    
+    if (!is.null(coords$x)) {
+      graphics::points(x = coords$x, y = coords$y, col = "black", pch = 19, cex = 2)}
   })
-})
+  
+  #updates coordinates when user clicks
+  observeEvent(input$rink_click, {
+    coords$x = input$rink_click$x
+    coords$y = input$rink_click$y})
+  
+  output$coords = renderPrint({
+    req(coords$x)
+    data.frame(
+      x = round(coords$x,1),
+      y = round(coords$y,1),
+      distance = round(distance(),1),
+      angle = round(angle(),1))})
+  
+  #calculates probability
+  observeEvent(input$predict, {
+    req(coords$x, coords$y)
+    distance = sqrt((89 - coords$x)^2 + coords$y^2)
+    angle = atan2(abs(coords$y), 89 - coords$x) * 180 / pi
+    new_data = data.frame(
+      xCoord = coords$x,
+      yCoord = coords$y,
+      distance = distance,
+      angle = angle,
+      secondsElapsedInGame = input$secondsElapsedInGame,
+      
+      strengthState = factor(input$strengthState,
+        levels = levels(events_after_faceoff2$strengthState)),
+      
+      scoreState = factor(input$scoreState,
+        levels = levels(events_after_faceoff2$scoreState)),
+      
+      isEmptyNetFor = factor(input$isEmptyNetFor,
+        levels = levels(events_after_faceoff2$isEmptyNetFor)),
+      
+      isEmptyNetAgainst = factor(input$isEmptyNetAgainst,
+        levels = levels(events_after_faceoff2$isEmptyNetAgainst)))
+    
+    prob = predict(
+      nhl.mod, newdata = new_data,
+      type = "response")
+    
+    output$probability = renderText({
+      paste0(round(prob * 100, 1), "% chance of a shot attempt")})
+  })
 }
 
+
 shinyApp(ui, server)
+

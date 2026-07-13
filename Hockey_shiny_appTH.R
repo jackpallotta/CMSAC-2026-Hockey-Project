@@ -168,7 +168,7 @@ server = function(input, output) {
   
   distance = reactive({
     req(coords$x, coords$y)
-    sqrt((89 - coords$x)^2 + coords$y^2)})
+    sqrt((89 - coords$x)^2 + coords$y^2)})#looking at one particular goal as the attack goal or wtv
   
   angle = reactive({
     req(coords$x, coords$y)

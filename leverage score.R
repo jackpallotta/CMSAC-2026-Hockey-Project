@@ -12,7 +12,7 @@ goal_diff_levels <- c(-3, -2, -1, 0, 1, 2, 3)
 leverageVariables <- faceoffsCleaned |>
   select(gameId, eventId, faceoffPlayerId, player, secondsRemaining, secondsRemainingPeriod, isOT,
          manDifferential, isEmptyNetFor, isEmptyNetAgainst, goalDifferential, zoneCode, faceoffSituation, 
-         wonGame, fullFiveSecondWindow, availableSATWindow, secondsUntilStoppage, stoppageReason, 
+         faceoffWon, wonGame, fullFiveSecondWindow, availableSATWindow, secondsUntilStoppage, stoppageReason, 
          SATWindowOutcome, SATFor5, SATAgainst5, USATFor5, USATAgainst5, blockedShotFor5, 
          blockedShotAgainst5, xGFor5, xGAgainst5) |>
   mutate(wonGame = as.integer(wonGame),
@@ -104,3 +104,10 @@ leverageVariables |>
   group_by(decile) |>
   summarize(predicted = mean(pred),
             observed = mean(wonGame))
+
+# join leverage score into cleaned faceoffs
+faceoffData <- faceoffsCleaned |>
+  left_join(leverageVariables |> select(eventId, faceoffWon, leverage),
+    by = c("eventId", "faceoffWon"), relationship = "many-to-one")
+
+saveRDS(faceoffData, "faceoffData.rds")

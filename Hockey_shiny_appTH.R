@@ -87,7 +87,7 @@ events_after_faceoff2 = pbp_faceoffs |>
 #Modeling probability of a shot attempt following a face-off
 #same model as gam.mod4 from Capstone_Hockey_projTH.R file
 nhl.mod =  bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + s(distance, k = 20)+ 
-                 s(secondsElapsedInGame) + s(angle, k = 15) + strengthState:scoreState +
+                 s(secondsElapsedInGame) + s(angle, k = 15) + strengthState*scoreState +
                  isEmptyNetFor + isEmptyNetAgainst , 
                data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(nhl.mod)

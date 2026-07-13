@@ -13,7 +13,10 @@ pbp_cleaned_temp <- pbp_cleaned |>
          eventOwnerTeamId, eventTeamVenue, eventTypeDescKey, situationCode, isHome, homeIsEmptyNet, awayIsEmptyNet, 
          isEmptyNetFor, isEmptyNetAgainst, homeSkaterCount, awaySkaterCount, skaterCountFor,
          skaterCountAgainst, manDifferential, goalDifferential, strengthState, homeTeamDefendingSide,
-         zoneCode, coordinates, winningPlayerId, losingPlayerId)
+         zoneCode, coordinates, winningPlayerId, losingPlayerId, skater1PlayerIdFor, skater1PlayerIdAgainst,
+         skater2PlayerIdFor, skater2PlayerIdAgainst, skater3PlayerIdFor, skater3PlayerIdAgainst,
+         skater4PlayerIdFor, skater4PlayerIdAgainst, skater5PlayerIdFor, skater5PlayerIdAgainst,
+         skater6PlayerIdFor, skater6PlayerIdAgainst)
 
 # faceoff-winning team's perspective
 faceoffs_temp <- pbp_cleaned_temp |>
@@ -21,6 +24,15 @@ faceoffs_temp <- pbp_cleaned_temp |>
   left_join(schedule |> select(gameId, gameDate, awayTeamId, homeTeamId, winningTeamId), by = "gameId") |>
   mutate(faceoffWon = 1L,
          wonGame = as.integer(eventOwnerTeamId == winningTeamId))
+
+# create the faceoff teammate variables
+faceoffs_temp <- faceoffs_temp |>
+  mutate(playerOnIce1 = case_when(faceoffWon == 1 ~ skater1PlayerIdFor, TRUE ~ skater1PlayerIdAgainst),
+         playerOnIce2 = case_when(faceoffWon == 1 ~ skater2PlayerIdFor, TRUE ~ skater2PlayerIdAgainst),
+         playerOnIce3 = case_when(faceoffWon == 1 ~ skater3PlayerIdFor, TRUE ~ skater3PlayerIdAgainst),
+         playerOnIce4 = case_when(faceoffWon == 1 ~ skater4PlayerIdFor, TRUE ~ skater4PlayerIdAgainst),
+         playerOnIce5 = case_when(faceoffWon == 1 ~ skater5PlayerIdFor, TRUE ~ skater5PlayerIdAgainst),
+         playerOnIce6 = case_when(faceoffWon == 1 ~ skater6PlayerIdFor, TRUE ~ skater6PlayerIdAgainst))
 
 # mirror every faceoff from the losing team's perspective
 mirrored_faceoffs <- faceoffs_temp |>
@@ -48,6 +60,15 @@ mirrored_faceoffs <- faceoffs_temp |>
     isEmptyNetFor = isEmptyNetAgainst,
     isEmptyNetAgainst = temp) |>
   select(-temp)
+
+# get the players on ice for the faceoff losing team
+mirrored_faceoffs <- mirrored_faceoffs |>
+  mutate(playerOnIce1 = case_when(faceoffWon == 0 ~ skater1PlayerIdAgainst, TRUE ~ NA_integer_),
+         playerOnIce2 = case_when(faceoffWon == 0 ~ skater2PlayerIdAgainst, TRUE ~ NA_integer_),
+         playerOnIce3 = case_when(faceoffWon == 0 ~ skater3PlayerIdAgainst, TRUE ~ NA_integer_),
+         playerOnIce4 = case_when(faceoffWon == 0 ~ skater4PlayerIdAgainst, TRUE ~ NA_integer_),
+         playerOnIce5 = case_when(faceoffWon == 0 ~ skater5PlayerIdAgainst, TRUE ~ NA_integer_),
+         playerOnIce6 = case_when(faceoffWon == 0 ~ skater6PlayerIdAgainst, TRUE ~ NA_integer_))
 
 # combine the data
 faceoffs <- bind_rows(faceoffs_temp, mirrored_faceoffs)
@@ -397,14 +418,18 @@ faceoffsCleaned <- faceoffs |>
     teamDefendingSide, strengthState, isEmptyNetFor, isEmptyNetAgainst, skaterCountFor, skaterCountAgainst,
     manDifferential, goalDifferential, coordinates, zoneCode, faceoffDotCategory, faceoffSituation,
     faceoffPlayerId, player, shoots, strongSide, stickDownFirst, age, faceoffGameCount,
-    seasonFaceoffCount, seasonGameNumber, careerGameNumber, faceoffWon, fullFiveSecondWindow,
+    seasonFaceoffCount, seasonGameNumber, careerGameNumber, playerOnIce1, playerOnIce2, 
+    playerOnIce3, playerOnIce4, playerOnIce5, playerOnIce6, faceoffWon, fullFiveSecondWindow,
     availableSATWindow, secondsUntilStoppage, stoppageReason, SATWindowOutcome, SATWindowCensored,
     SATFor5, SATAgainst5, SATCountFor5, SATCountAgainst5, USATFor5, USATAgainst5, USATCountFor5,
     USATCountAgainst5, blockedShotFor5, blockedShotAgainst5, blockedShotCountFor5, blockedShotCountAgainst5,
     xGFor5, xGAgainst5, wonGame)
 
+
+lookup <- setNames(players$player, players$playerId)
 test_game <- faceoffsCleaned |>
   filter(gameId == 2025021312) |>
-  arrange(eventId)
+  arrange(eventId) |>
+  mutate(across(starts_with("playerOnIce"), ~ lookup[as.character(.x)]))
 
 saveRDS(faceoffsCleaned, "faceoffsCleaned.rds")

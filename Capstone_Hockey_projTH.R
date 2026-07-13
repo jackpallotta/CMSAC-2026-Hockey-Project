@@ -298,10 +298,26 @@ summary(gam.mod6)
 
 
 bam.mod = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + 
-                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState:scoreState +
+                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
               data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(bam.mod)
+
+bam.mod2 = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + 
+                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+              data = events_after_faceoff2, family = Tw(link = logit), method = "fREML", discrete = TRUE)
+summary(bam.mod2)
+
+require(statmod)
+require(tweedie)
+
+tweedie.mod = glm(xG~ xCoord*yCoord + distance + angle + secondsElapsedInGame + 
+                    strengthState*scoreState + isEmptyNetAgainst + isEmptyNetFor,
+                  data = events_after_faceoff2, family = tweedie(var.power = 1.5, link.power = 0))
+summary(tweedie.mod)
+
+
 
 #looking at glmm models (Absolute trash)
 glmm.mod = glmer(fo_success~ zoneCode + xCoordNorm + distance + (1| eventOwnerTeamId) + xG,
@@ -336,6 +352,7 @@ mod4_pred_prob = predict(mod4, type = "response")
 
 gam.mod5_pred_prob = predict(gam.mod5, type = "response") 
 
+tweedie.mod_pred_prob = predict(tweedie.mod,type = "response")
 
 mod3_pred_class = ifelse(mod3_pred_prob > 0.5, "Win", "Loss") 
 #labeling the predictions as a win or loss
@@ -345,6 +362,7 @@ mod4_pred_class = ifelse(mod4_pred_prob > 0.5, "Win", "Loss")
 
 gam.mod5_pred_class = ifelse(gam.mod5_pred_prob > 0.5, "Win", "Loss") 
 
+tweedie.mod_pred_class = ifelse(tweedie.mod_pred_prob > 0.5, "Win", "Loss")
 
 mod3_pred_binary = ifelse(mod3_pred_prob > 0.5, 1, 0)
 
@@ -352,6 +370,7 @@ mod4_pred_binary = ifelse(mod4_pred_prob > 0.5, 1, 0)
 
 gam.mod5_pred_binary = ifelse(gam.mod5_pred_prob > 0.5, 1, 0)
 
+tweedie.mod_pred_binary = ifelse(tweedie.mod_pred_prob > 0.5, 1, 0)
 
 #mean(mod3_pred_class != events_after_faceoff2$fo_success) #Not Working
 
@@ -367,6 +386,7 @@ mean((mod4_pred_binary - mod4_pred_prob)^2)
 #pretty solid BRIER Score of 0.096 for gam.mod4, brier score of 0.097 for gam.mod5
 mean((gam.mod5_pred_binary - gam.mod5_pred_prob)^2)
 
+mean((tweedie.mod_pred_binary - tweedie.mod_pred_prob)^2)
 
 shot_results = events_after_faceoff2 |>
   select(is_shot_atmpt, leftRight,zoneCode, xCoord, yCoord,distance, 

@@ -1,5 +1,4 @@
 rm(list = ls())
-
 library(tidyverse)
 library(splines)
 library(pROC)
@@ -8,94 +7,44 @@ library(pROC)
 spline_df <- 7
 
 # baseline logistic regression
-SAT_logit_initial <- glm(
-  SATFor5 ~
-    goalDifferential +
-    secondsRemaining +
-    zoneCode +
-    manDifferential +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_logit_initial <- glm(SATFor5 ~ goalDifferential + secondsRemaining +
+    zoneCode + manDifferential + isOT + isEmptyNetFor + isEmptyNetAgainst,
+  family = binomial(link = "logit"), data = leverageVariables)
 
 # nonlinear time, additive zone and numeric manpower effects
-SAT_glm_spline_base <- glm(
-  SATFor5 ~
-    goalDifferential * ns(secondsRemaining, df = spline_df) +
-    zoneCode +
-    manDifferential +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_glm_spline_base <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = spline_df) +
+    zoneCode + manDifferential + isOT + isEmptyNetFor + isEmptyNetAgainst,
+  family = binomial(link = "logit"), data = leverageVariables)
 
 # nonlinear time plus zone-by-numeric-manpower interaction
-SAT_glm_spline <- glm(
-  SATFor5 ~
-    goalDifferential * ns(secondsRemaining, df = spline_df) +
-    zoneCode * manDifferential +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_glm_spline <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = spline_df) +
+    zoneCode * manDifferential + isOT + isEmptyNetFor + isEmptyNetAgainst,
+  family = binomial(link = "logit"), data = leverageVariables)
 
 # treat manpower differential categorically
-SAT_glm_manpower_factor <- glm(
-  SATFor5 ~
-    goalDifferential * ns(secondsRemaining, df = spline_df) +
-    zoneCode +
-    factor(manDifferential) +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_glm_manpower_factor <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = spline_df) +
+    zoneCode + factor(manDifferential) + isOT + isEmptyNetFor + isEmptyNetAgainst, 
+    family = binomial(link = "logit"), data = leverageVariables)
 
 # categorical manpower effect allowed to differ by zone
-SAT_glm_factor_interaction <- glm(
-  SATFor5 ~
-    goalDifferential * ns(secondsRemaining, df = spline_df) +
-    zoneCode * factor(manDifferential) +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_glm_factor_interaction <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = spline_df) +
+    zoneCode * factor(manDifferential) + isOT + isEmptyNetFor + isEmptyNetAgainst, 
+    family = binomial(link = "logit"), data = leverageVariables)
 
 # add the actual amount of available SAT exposure
-SAT_logit_window <- glm(
-  SATFor5 ~
-    goalDifferential * ns(secondsRemaining, df = spline_df) +
-    zoneCode * factor(manDifferential) +
-    isOT +
-    isEmptyNetFor +
-    isEmptyNetAgainst +
-    logAvailableSATWindow,
-  family = binomial(link = "logit"),
-  data = leverageVariables
-)
+SAT_logit_window <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = spline_df) +
+    zoneCode * factor(manDifferential) + isOT + isEmptyNetFor + isEmptyNetAgainst +
+    logAvailableSATWindow, family = binomial(link = "logit"), data = leverageVariables)
 
-models <- list(
-  linear = SAT_logit_initial,
+models <- list(linear = SAT_logit_initial,
   spline_base = SAT_glm_spline_base,
   spline_numeric_interaction = SAT_glm_spline,
   spline_factor_manpower = SAT_glm_manpower_factor,
   spline_factor_interaction = SAT_glm_factor_interaction,
-  window = SAT_logit_window
-)
+  window = SAT_logit_window)
 
 SAT_model_comparison <- tibble(
   model = names(models),
-  
   AUC = map_dbl(models, \(m) {
     pred <- predict(m, type = "response")
     
@@ -109,7 +58,6 @@ SAT_model_comparison <- tibble(
       )
     )
   }),
-  
   Brier = map_dbl(models, \(m) {
     pred <- predict(m, type = "response")
     
@@ -118,36 +66,6 @@ SAT_model_comparison <- tibble(
       na.rm = TRUE
     )
   }),
-  
-  AIC = map_dbl(models, AIC)
-)
+  AIC = map_dbl(models, AIC))
 
 SAT_model_comparison
-
-# linear time versus nonlinear time
-anova(
-  SAT_logit_initial,
-  SAT_glm_spline_base,
-  test = "Chisq"
-)
-
-# additive numeric manpower versus zone-by-manpower interaction
-anova(
-  SAT_glm_spline_base,
-  SAT_glm_spline,
-  test = "Chisq"
-)
-
-# additive categorical manpower versus categorical zone interaction
-anova(
-  SAT_glm_manpower_factor,
-  SAT_glm_factor_interaction,
-  test = "Chisq"
-)
-
-# add the available SAT window
-anova(
-  SAT_glm_factor_interaction,
-  SAT_logit_window,
-  test = "Chisq"
-)

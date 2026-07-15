@@ -9,10 +9,12 @@ require(tidyverse)
 require(car)
 require(mgcv)
 require(lme4)
+require(pROC)
 
 theme_set(theme_bw())
 
 faceoffs_cleaned = readRDS("faceoffsCleaned.rds")
+faceoffData = readRDS("faceoffData.rds")
 
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)
@@ -239,6 +241,50 @@ events_after_faceoff2 = pbp_faceoffs |>
   mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
   filter(periodType == "REG")
 
+events_after_faceoff2 = events_after_faceoff2 |>
+  group_by(faceoff_row) |>
+  mutate(future_shot = as.numeric(any(eventTypeDescKey %in%
+                                        c("shot-on-goal","missed-shot","goal")))) |>
+  ungroup()
+
+events_model = events_after_faceoff2 |> #training model
+  filter(!eventTypeDescKey %in% c("shot-on-goal","missed-shot","goal"))
+
+saveRDS(events_after_faceoff2, "events_after_faceoffs.rds")
+
+#testing and training new model
+set.seed(071526)
+
+faceoff_ids = unique(events_model$faceoff_row)
+
+train_ids = sample(
+  faceoff_ids,
+  size = 0.75 * length(faceoff_ids))
+
+train_data = events_model |>
+  filter(faceoff_row %in% train_ids)
+
+test_data = events_model |>
+  filter(!faceoff_row %in% train_ids)
+
+
+test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(test.mod)
+
+test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
+
+test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
+
+table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
+
+roc_obj4 = roc(test_data$future_shot, test_data$pred_prob)
+
+auc(roc_obj4)
+
+
 
 #Following Models and code looking at model accuracy (ROC and AUC) all for the question do Face-offs matter
 
@@ -303,11 +349,23 @@ bam.mod = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) +
               data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(bam.mod)
 
-bam.mod2 = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + 
-                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
-                isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
-              data = events_after_faceoff2, family = Tw(link = logit), method = "fREML", discrete = TRUE)
+
+bam.mod2 = bam(USATFor5 ~ zoneCode + coordinates + goalDifferential*manDifferential + 
+                 s(secondsRemaining) , data = faceoffData, family = binomial(link = logit),
+               method = "fREML", discrete = TRUE)
 summary(bam.mod2)
+
+bam.mod3 = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = events_model, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(bam.mod3)
+
+#bam.mod2 = bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + 
+#                s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+#                isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+#              data = events_after_faceoff2, family = Tw(link = logit), method = "fREML", discrete = TRUE)
+#summary(bam.mod2)
 
 require(statmod)
 require(tweedie)

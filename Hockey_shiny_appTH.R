@@ -208,7 +208,8 @@ ui = fluidPage(
 server = function(input, output) {
   #stores the selected faceoff location
   sequence = reactiveValues(
-    events = data.frame(eventTypeDescKey = character(), xCoord = numeric(), yCoord = numeric()))
+    events = data.frame(eventTypeDescKey = character(), xCoord = numeric(), yCoord = numeric(),
+                        secondsElapsedInGame = numeric()))
   
   faceoff_dots = data.frame(
     x = c(-69, -20, 20, 69, -69, -20, 20, 69, 0),
@@ -290,7 +291,8 @@ server = function(input, output) {
   
   observeEvent(input$reset,{
     sequence$events = data.frame(
-      eventTypeDescKey=character(), xCoord=numeric(), yCoord=numeric())
+      eventTypeDescKey=character(), xCoord=numeric(), yCoord=numeric(),
+      secondsElapsedInGame = numeric())
   })
 }
 

@@ -25,7 +25,7 @@ events_after_faceoff2 = pbp_faceoffs |>
       faceoff_time < secondsElapsedInGame,   
       faceoff_end >= secondsElapsedInGame)) |>
   mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
-  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal")) |>
+  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal" )) |>
   mutate(faceoffDotCategory = case_when(xCoord == -69 & yCoord == 22 ~ '1',
                                         xCoord == -20 & yCoord == 22 ~ '2',
                                         xCoord == 20 & yCoord == 22 ~ '3',
@@ -82,14 +82,54 @@ events_after_faceoff2 = pbp_faceoffs |>
   mutate(isEmptyNetFor = as.factor(isEmptyNetFor)) |>
   mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
   mutate(strengthState = as.factor(strengthState)) |>
+  mutate(eventTypeDescKey = as.factor(eventTypeDescKey)) |>
   filter(periodType == "REG")
 
+
+events_after_faceoff2 = events_after_faceoff2 |>
+  group_by(faceoff_row) |>
+  mutate(future_shot = as.numeric(any(eventTypeDescKey %in%
+        c("shot-on-goal","missed-shot","goal")))) |>
+  ungroup()
+events_model = events_after_faceoff2 |> #training model
+  filter(!eventTypeDescKey %in% c("shot-on-goal","missed-shot","goal"))
+
+
+#testing and training new model
+set.seed(071526)
+
+faceoff_ids = unique(events_model$faceoff_row)
+
+train_ids = sample(
+  faceoff_ids,
+  size = 0.75 * length(faceoff_ids))
+
+train_data = events_model |>
+  filter(faceoff_row %in% train_ids)
+
+test_data = events_model |>
+  filter(!faceoff_row %in% train_ids)
+
+
+test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(test.mod)
+
+test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
+
+test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
+
+table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
+
+
 #Modeling probability of a shot attempt following a face-off
-#same model as gam.mod4 from Capstone_Hockey_projTH.R file
-nhl.mod =  bam(is_shot_atmpt ~  s(xCoord,yCoord, k = 30) + s(distance, k = 20)+ 
-                 s(secondsElapsedInGame) + s(angle, k = 15) + strengthState*scoreState +
-                 isEmptyNetFor + isEmptyNetAgainst , 
-               data = events_after_faceoff2, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+#renaming test.mod
+nhl.mod =  bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(nhl.mod)
 saveRDS(nhl.mod, "nhl_mod.rds")
 
@@ -104,8 +144,8 @@ mean((nhl.mod_pred_binary - nhl.mod_pred_prob)^2)
 
 #checking the accuracy of the predictions of the shot probabilities
 #creating a new variable shot_prob of the probability of shots following a face-off
-shot_results = events_after_faceoff2 |>
-  select(is_shot_atmpt, xCoord, yCoord,distance, scoreState, strengthState,
+shot_results = train_data |>
+  select(future_shot, eventTypeDescKey, xCoord, yCoord,distance, scoreState, strengthState,
          secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
   drop_na() |>
   mutate(shot_prob = predict(nhl.mod, type = "response"),
@@ -116,17 +156,17 @@ shot_calibration_check =  shot_results |>
   group_by(pred_decile2) |>
   summarize(
     predicted = mean(shot_prob),
-    actual = mean(is_shot_atmpt),
+    actual = mean(future_shot),
     n = n(),
     .groups = "drop")
 shot_calibration_check #only slightly off
 
 roc_obj2 = roc(
-  response = shot_results$is_shot_atmpt,
+  response = shot_results$future_shot,
   predictor = shot_results$shot_prob,
   quiet = TRUE)
 
-auc(roc_obj2) #AUC is 0.828
+auc(roc_obj2) #AUC is 0.858
 
 #creating an ROC curve
 #library(pROC)
@@ -152,83 +192,108 @@ ui = fluidPage(
       checkboxInput("isEmptyNetFor", "Net is Empty for Event Team", FALSE),
       checkboxInput("isEmptyNetAgainst", "Net is Empty for Team Against Event", FALSE),
       numericInput("secondsElapsedInGame","Seconds Elapsed in Game",min = 0,max = 3600,value = 1200),
-      selectInput("strengthState","Strength State",choices = levels(events_after_faceoff2$strengthState)),
-      selectInput("scoreState","Score State",choices = levels(events_after_faceoff2$scoreState)),
-    actionButton("predict", "Calculate Probability")),
+      selectInput("strengthState","Strength State",choices = levels(events_model$strengthState)),
+      selectInput("scoreState","Score State",choices = levels(events_model$scoreState)),
+      selectInput("eventTypeDescKey", "Event Type" , choices = levels(events_model$eventTypeDescKey)),
+    actionButton("predict", "Calculate Probability"),
+    actionButton("reset", "Reset Sequence")),
   mainPanel(
     plotOutput("rink",
       click = "rink_click",
       height = "600px"),
-    verbatimTextOutput("coords"),
+    h3("Event Sequence"),
+    tableOutput("events"),
     h2(textOutput("probability")))))
 
 server = function(input, output) {
   #stores the selected faceoff location
-  coords = reactiveValues(x = NULL, y = NULL)
+  sequence = reactiveValues(
+    events = data.frame(eventTypeDescKey = character(), xCoord = numeric(), yCoord = numeric()))
   
-  distance = reactive({
-    req(coords$x, coords$y)
-    sqrt((89 - coords$x)^2 + coords$y^2)})#looking at one particular goal as the attack goal or wtv
+  faceoff_dots = data.frame(
+    x = c(-69, -20, 20, 69, -69, -20, 20, 69, 0),
+    y = c(22, 22, 22, 22, -22, -22, -22, -22, 0 ))
   
-  angle = reactive({
-    req(coords$x, coords$y)
-    atan2(abs(coords$y), 89 - coords$x) * 180 / pi})
+  #updates coordinates when user clicks
+  observeEvent(input$rink_click, {
+    click_x = input$rink_click$x
+    click_y = input$rink_click$y
+    
+    if(nrow(sequence$events) == 0){
+      dist = sqrt((faceoff_dots$x-click_x)^2 + (faceoff_dots$y-click_y)^2)
+      
+      closest = which.min(dist)
+      
+      sequence$events = data.frame(
+        eventTypeDescKey = "faceoff",
+        xCoord=faceoff_dots$x[closest],
+        yCoord=faceoff_dots$y[closest])
+    }
+    else {
+      sequence$events = rbind(sequence$events, data.frame(
+        eventTypeDescKey = input$eventTypeDescKey,
+        xCoord=click_x, yCoord=click_y))
+    }
+    
+  })
+  
+  output$events = renderTable({
+    sequence$events})
   
   #draws the rink
   output$rink = renderPlot({
      draw_NHL_rink() +
        coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43))
     
-    if (!is.null(coords$x)) {
-      graphics::points(x = coords$x, y = coords$y, col = "black", pch = 19, cex = 2)}
+    if (nrow(sequence$events) >0) {
+      graphics::points(x = sequence$events$xCoord, y = sequence$events$yCoord, 
+                       col = "black", pch = 19, cex = 2)
+      
+      graphics::lines(sequence$events$xCoord, sequence$events$yCoord, col="green2", lwd=2)}
   })
-  
-  #updates coordinates when user clicks
-  observeEvent(input$rink_click, {
-    coords$x = input$rink_click$x
-    coords$y = input$rink_click$y})
-  
-  output$coords = renderPrint({
-    req(coords$x)
-    data.frame(
-      x = round(coords$x,1),
-      y = round(coords$y,1),
-      distance = round(distance(),1),
-      angle = round(angle(),1))})
-  
+
   #calculates probability
   observeEvent(input$predict, {
-    req(coords$x, coords$y)
-    distance = sqrt((89 - coords$x)^2 + coords$y^2)
-    angle = atan2(abs(coords$y), 89 - coords$x) * 180 / pi
+    req(nrow(sequence$events)>0)
+    current = tail(sequence$events, 1)
+    distance = sqrt((89 - current$xCoord)^2 + current$yCoord^2)
+    angle = atan2(abs(current$yCoord), 89 - current$xCoord) * 180 / pi
     new_data = data.frame(
-      xCoord = coords$x,
-      yCoord = coords$y,
+      xCoord = current$xCoord,
+      yCoord = current$yCoord,
       distance = distance,
       angle = angle,
       secondsElapsedInGame = input$secondsElapsedInGame,
       
       strengthState = factor(input$strengthState,
-        levels = levels(events_after_faceoff2$strengthState)),
+        levels = levels(train_data$strengthState)),
       
       scoreState = factor(input$scoreState,
-        levels = levels(events_after_faceoff2$scoreState)),
+        levels = levels(train_data$scoreState)),
       
       isEmptyNetFor = factor(input$isEmptyNetFor,
-        levels = levels(events_after_faceoff2$isEmptyNetFor)),
+        levels = levels(train_data$isEmptyNetFor)),
       
       isEmptyNetAgainst = factor(input$isEmptyNetAgainst,
-        levels = levels(events_after_faceoff2$isEmptyNetAgainst)))
+        levels = levels(train_data$isEmptyNetAgainst)),
+      
+      eventTypeDescKey = factor(current$eventTypeDescKey,
+        levels = levels(train_data$eventTypeDescKey)))
     
     prob = predict(
       nhl.mod, newdata = new_data,
       type = "response")
     
     output$probability = renderText({
-      paste0(round(prob * 100, 1), "% chance of a shot attempt")})
+      paste0(round(prob * 100, 1), "% probability of a shot attempt")})
+  })
+  
+  observeEvent(input$reset,{
+    sequence$events = data.frame(
+      eventTypeDescKey=character(), xCoord=numeric(), yCoord=numeric())
   })
 }
 
-
 shinyApp(ui, server)
+
 

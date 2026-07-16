@@ -1,6 +1,9 @@
 rm(list = ls())
 library(tidyverse)
 library(splines)
+library(mgcv)
+library(broom)
+library(gratia)
 
 theme_set(theme_light())
 
@@ -10,24 +13,24 @@ goal_diff_levels <- c(-3, -2, -1, 0, 1, 2, 3)
 
 # prepare the data
 leverageVariables <- faceoffsCleaned |>
-  select(gameId, eventId, faceoffPlayerId, player, secondsRemaining, secondsRemainingPeriod, isOT,
-         manDifferential, isEmptyNetFor, isEmptyNetAgainst, goalDifferential, zoneCode, faceoffSituation, 
-         faceoffWon, wonGame, fullFiveSecondWindow, availableSATWindow, secondsUntilStoppage, stoppageReason, 
-         SATWindowOutcome, SATFor5, SATAgainst5, USATFor5, USATAgainst5, blockedShotFor5, 
-         blockedShotAgainst5, xGFor5, xGAgainst5) |>
+  select(gameId, eventId, faceoffPlayerId, player, secondsRemaining, secondsRemainingPeriod,
+         situationCode, goalDifferential, zoneCode, isOT, faceoffSituation, faceoffWon, wonGame,
+         fullFiveSecondWindow, availableSATWindow, secondsUntilStoppage, stoppageReason,
+         SATWindowOutcome, xGFor5, xGAgainst5, goalFor5, goalAgainst5) |>
   mutate(wonGame = as.integer(wonGame),
-         manDifferentialFactor = factor(manDifferential),
+         situationCode = case_when(situationCode %in% c("6v3", "6v4") ~ "EN +2",
+                                   situationCode %in% c("3v6", "4v6") ~ "EN -2",
+                                   TRUE ~ situationCode),
+         situationCode = factor(situationCode),
          goalDifferential = factor(goalDifferential, levels = goal_diff_levels),
          zoneCode = factor(zoneCode, levels = c("D", "N", "O")),
          isOT = factor(isOT, levels = c(0, 1), labels = c("Regulation", "Overtime")),
-         isEmptyNetFor = factor(isEmptyNetFor, levels = c(0, 1), labels = c("No", "Yes")),
-         isEmptyNetAgainst = factor(isEmptyNetAgainst, levels = c(0, 1), labels = c("No", "Yes")),
          fullFiveSecondWindow = factor(fullFiveSecondWindow, levels = c(0, 1), labels = c("No", "Yes")),
-         logAvailableSATWindow = log(availableSATWindow))
+         logAvailableWindow = log1p(availableSATWindow))
 
 # win probability model
 wp_glm <- glm(wonGame ~ goalDifferential * ns(secondsRemaining, df = 7) +
-                zoneCode * manDifferential + isOT + isEmptyNetFor + isEmptyNetAgainst,
+                zoneCode * situationCode + isOT,
               data = leverageVariables, family = binomial(link = "logit"))
 
 # create a copy of every faceoff scenario for a goal scored
@@ -60,54 +63,39 @@ leverageVariables <- leverageVariables |>
     goalAgainstImpact = currentWinProbability - winProbabilityGoalAgainst,
     totalGoalSwing = winProbabilityGoalFor - winProbabilityGoalAgainst)
 
-SAT_For_glm <- glm(SATFor5 ~ goalDifferential * ns(secondsRemaining, df = 7) +
-                     zoneCode * manDifferentialFactor + isOT +
-                     isEmptyNetFor + isEmptyNetAgainst + logAvailableSATWindow,
-                   family = binomial(link = "logit"), data = leverageVariables)
+xGF_bam <- bam(xGFor5 ~ goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8, bs = "cr") +
+                 zoneCode + situationCode + s(logAvailableWindow, k = 5, bs = "cr"),
+               family = tw(link = "log"), method = "fREML", discrete = TRUE, nthreads = 4, data = leverageVariables)
 
-SAT_Against_glm <- glm(SATAgainst5 ~ goalDifferential * ns(secondsRemaining, df = 7) +
-                         zoneCode * manDifferentialFactor + isOT +
-                         isEmptyNetFor + isEmptyNetAgainst + logAvailableSATWindow,
-                       family = binomial(link = "logit"), data = leverageVariables)
+xGA_bam <- bam(xGAgainst5 ~
+                 goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8, bs = "cr") +
+                 zoneCode + situationCode + s(logAvailableWindow, k = 5, bs = "cr"),
+               family = tw(link = "log"), method = "fREML", discrete = TRUE, nthreads = 4, data = leverageVariables)
 
 leverageVariables <- leverageVariables |>
-  mutate(probabilitySATFor5 = predict(
-    SAT_For_glm, 
+  mutate(predictedxGF_5 = predict(
+    xGF_bam, 
     newdata = leverageVariables,
     type = "response"),
     
-    probabilitySATAgainst5 = predict(
-      SAT_Against_glm,
+    predictedxGA_5 = predict(
+      xGA_bam,
       newdata = leverageVariables,
       type = "response"),
     
-    offensiveOpportunityLeverage = goalForImpact * probabilitySATFor5,
-    defensiveOpportunityLeverage = goalAgainstImpact * probabilitySATAgainst5,
-    opportunityAdjustedLeverage = offensiveOpportunityLeverage + defensiveOpportunityLeverage)
+    offensiveLeverage = goalForImpact * predictedxGF_5,
+    defensiveLeverage = goalAgainstImpact * predictedxGA_5,
+    rawLeverage = offensiveLeverage + defensiveLeverage)
 
 # set the leverage score on a scale of 0 to 1, round 4 decimal places
 leverageVariables <- leverageVariables |>
-  mutate(leverage = round(1 * (opportunityAdjustedLeverage -
-                                   min(opportunityAdjustedLeverage, na.rm = TRUE)) /
-                            (max(opportunityAdjustedLeverage, na.rm = TRUE) -
-                               min(opportunityAdjustedLeverage, na.rm = TRUE)), 4))
-
-# AUC and calibration
-library(pROC)
-
-pred <- predict(wp_glm, type = "response")
-roc(leverageVariables$wonGame, pred)
-
-leverageVariables |>
-  mutate(pred = predict(wp_glm, type = "response"),
-         decile = ntile(pred, 10)) |>
-  group_by(decile) |>
-  summarize(predicted = mean(pred),
-            observed = mean(wonGame))
+  mutate(leverage = round(1 * (rawLeverage - min(rawLeverage, na.rm = TRUE)) /
+                            (max(rawLeverage, na.rm = TRUE) - 
+                               min(rawLeverage, na.rm = TRUE)), 4))
 
 # join leverage score into cleaned faceoffs
 faceoffData <- faceoffsCleaned |>
   left_join(leverageVariables |> select(eventId, faceoffWon, leverage),
-    by = c("eventId", "faceoffWon"), relationship = "many-to-one")
+            by = c("eventId", "faceoffWon"), relationship = "many-to-one")
 
 saveRDS(faceoffData, "faceoffData.rds")

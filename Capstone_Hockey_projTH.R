@@ -239,16 +239,19 @@ events_after_faceoff2 = pbp_faceoffs |>
   mutate(periodNumber = as.factor(periodNumber)) |>
   mutate(isEmptyNetFor = as.factor(isEmptyNetFor)) |>
   mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
+  mutate(eventTeamVenue = as.factor(eventTeamVenue)) |>
   filter(periodType == "REG")
 
-events_after_faceoff2 = events_after_faceoff2 |>
+events_after_faceoff2 = events_after_faceoff2 |> #redoing it so that the shiny app wont stop when a shot is entered in the sequence
   group_by(faceoff_row) |>
-  mutate(future_shot = as.numeric(any(eventTypeDescKey %in%
-                                        c("shot-on-goal","missed-shot","goal")))) |>
+  mutate(future_shot = sapply(seq_len(n()), function(i) {
+    any(eventTypeDescKey[(i + 1):n()] %in% c("shot-on-goal","missed-shot","goal"))})
+  ) |>
   ungroup()
 
-events_model = events_after_faceoff2 |> #training model
-  filter(!eventTypeDescKey %in% c("shot-on-goal","missed-shot","goal"))
+events_model = events_after_faceoff2 |> #stopping it if a goal is entered in the sequence
+  filter(eventTypeDescKey != "goal")
+
 
 saveRDS(events_after_faceoff2, "events_after_faceoffs.rds")
 
@@ -267,9 +270,10 @@ train_data = events_model |>
 test_data = events_model |>
   filter(!faceoff_row %in% train_ids)
 
-
+#looking at only interaction terms for score state and strength state because 
+#you have to enter those variables into the app before hitting calculate probability
 test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
-                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState:scoreState +
                  isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
                data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
 summary(test.mod)
@@ -282,7 +286,7 @@ table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
 
 roc_obj4 = roc(test_data$future_shot, test_data$pred_prob)
 
-auc(roc_obj4)
+auc(roc_obj4) #0.8596
 
 
 

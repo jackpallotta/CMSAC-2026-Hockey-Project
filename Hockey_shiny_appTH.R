@@ -88,12 +88,15 @@ events_after_faceoff2 = pbp_faceoffs |>
 
 events_after_faceoff2 = events_after_faceoff2 |>
   group_by(faceoff_row) |>
-  mutate(future_shot = as.numeric(any(eventTypeDescKey %in%
-        c("shot-on-goal","missed-shot","goal")))) |>
+  mutate(future_shot = sapply(seq_len(n()), function(i) {
+      any(eventTypeDescKey[(i + 1):n()] %in% c("shot-on-goal","missed-shot","goal"))})
+  ) |>
   ungroup()
-events_model = events_after_faceoff2 |> #training model
-  filter(!eventTypeDescKey %in% c("shot-on-goal","missed-shot","goal"))
 
+events_model = events_after_faceoff2 |> #stopping it if a goal is entered in the sequence
+  filter(eventTypeDescKey != "goal") |>
+  mutate(eventTypeDescKey = as.factor(eventTypeDescKey)) |>
+  mutate(strengthState = as.factor(strengthState))
 
 #testing and training new model
 set.seed(071526)
@@ -286,7 +289,8 @@ server = function(input, output) {
       type = "response")
     
     output$probability = renderText({
-      paste0(round(prob * 100, 1), "% probability of a shot attempt")})
+      paste0(round(prob * 100, 1), "% probability of a future shot attempt following 
+             the sequence of events after a faceoff")})
   })
   
   observeEvent(input$reset,{

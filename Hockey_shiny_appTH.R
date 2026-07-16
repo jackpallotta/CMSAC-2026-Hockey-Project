@@ -290,7 +290,7 @@ server = function(input, output) {
     
     output$probability = renderText({
       paste0(round(prob * 100, 1), "% probability of a future shot attempt following 
-             the sequence of events after a faceoff")})
+             the sequence of events after the faceoff shown")})
   })
   
   observeEvent(input$reset,{

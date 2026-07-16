@@ -199,7 +199,7 @@ ui = fluidPage(
       selectInput("scoreState","Score State",choices = levels(events_model$scoreState)),
       selectInput("eventTypeDescKey", "Event Type" , choices = levels(events_model$eventTypeDescKey)),
     actionButton("predict", "Calculate Probability"),
-    actionButton("reset", "Reset Sequence")),
+    actionButton("reset", "Reset Sequence"))
   mainPanel(
     plotOutput("rink",
       click = "rink_click",
@@ -211,7 +211,7 @@ ui = fluidPage(
 server = function(input, output) {
   #stores the selected faceoff location
   sequence = reactiveValues(
-    events = data.frame(eventTypeDescKey = character(), xCoord = numeric(), yCoord = numeric(),
+    events = data.frame(eventTypeDescKey= character(), xCoord = numeric(), yCoord = numeric(),
                         secondsElapsedInGame = numeric()))
   
   faceoff_dots = data.frame(
@@ -229,14 +229,16 @@ server = function(input, output) {
       closest = which.min(dist)
       
       sequence$events = data.frame(
-        eventTypeDescKey = "faceoff",
+        eventTypeDescKey = "faceoff", #Event 
         xCoord=faceoff_dots$x[closest],
-        yCoord=faceoff_dots$y[closest])
+        yCoord=faceoff_dots$y[closest],
+        secondsElapsedInGame = input$secondsElapsedInGame)
     }
     else {
       sequence$events = rbind(sequence$events, data.frame(
-        eventTypeDescKey = input$eventTypeDescKey,
-        xCoord=click_x, yCoord=click_y))
+        eventTypeDescKey = input$eventTypeDescKey, #Event
+        xCoord=click_x, yCoord=click_y,
+        secondsElapsedInGame = input$secondsElapsedInGame))
     }
     
   })
@@ -281,7 +283,7 @@ server = function(input, output) {
       isEmptyNetAgainst = factor(input$isEmptyNetAgainst,
         levels = levels(train_data$isEmptyNetAgainst)),
       
-      eventTypeDescKey = factor(current$eventTypeDescKey,
+      eventTypeDescKey = factor(current$eventTypeDescKey, 
         levels = levels(train_data$eventTypeDescKey)))
     
     prob = predict(
@@ -295,9 +297,11 @@ server = function(input, output) {
   
   observeEvent(input$reset,{
     sequence$events = data.frame(
-      eventTypeDescKey=character(), xCoord=numeric(), yCoord=numeric(),
+      eventTypeDescKey=character(), xCoord=numeric(), yCoord=numeric(), #EVent
       secondsElapsedInGame = numeric())
+    
   })
+  
 }
 
 shinyApp(ui, server)

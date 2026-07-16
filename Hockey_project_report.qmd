@@ -20,9 +20,9 @@ execute:
 editor: visual
 ---
 
-https://rentosaijo.github.io/nhlscraper/logo.png <- nhlscraper logo if we want to put it in our report
+https://rentosaijo.github.io/nhlscraper/logo.png \<- nhlscraper logo if we want to put it in our report
 
-## Introduction 
+## Introduction
 
 Describe the problem and why it is important.
 
@@ -46,40 +46,26 @@ Give your conclusions and summarize what you have learned with regards to your q
 
 **(Feel free to remove this section when you submit)**
 
-This a Quarto document. 
-To learn more about Quarto see <https://quarto.org>.
-You can use the Render button to see what it looks like in HTML.
+This a Quarto document. To learn more about Quarto see <https://quarto.org>. You can use the Render button to see what it looks like in HTML.
 
 ### Text formatting
 
-Text can be bolded with **double asterisks** and italicized with *single asterisks*. 
-Monospace text, such as for short code snippets, uses `backticks`.
-(Note these are different from quotation marks or apostrophes.) Links are
-written [like this](http://example.com/).
+Text can be bolded with **double asterisks** and italicized with *single asterisks*. Monospace text, such as for short code snippets, uses `backticks`. (Note these are different from quotation marks or apostrophes.) Links are written [like this](http://example.com/).
 
 Bulleted lists can be written with asterisks:
 
-* Each item starts on a new line with an asterisk.
-* Items should start on the beginning of the line.
-* Leave blank lines after the end of the list so the list does not continue.
+- Each item starts on a new line with an asterisk.
+- Items should start on the beginning of the line.
+- Leave blank lines after the end of the list so the list does not continue.
 
-Mathematics can be written with LaTeX syntax using dollar signs. 
-For instance, using single dollar signs we can write inline math: $(-b \pm \sqrt{b^2 - 4ac})/2a$.
+Mathematics can be written with LaTeX syntax using dollar signs. For instance, using single dollar signs we can write inline math: $(-b \pm \sqrt{b^2 - 4ac})/2a$.
 
-To write math in "display style", i.e. displayed on its own line centered on the
-page, we use double dollar signs:
-$$
-x^2 + y^2 = 1
-$$
-
+To write math in "display style", i.e. displayed on its own line centered on the page, we use double dollar signs:
+$$x^2 + y^2 = 1$$
 
 ### Code blocks
 
-Code blocks are evaluated sequentially when you hit Render. 
-As the code runs, `R` prints out which block is running, so naming blocks is useful if you want to know which one takes a long time. 
-After the block name, you can specify [chunk options](https://yihui.org/knitr/options/). 
-For example, `echo` controls whether the code is printed in the document. 
-By default, output is printed in the document in monospace:
+Code blocks are evaluated sequentially when you hit Render. As the code runs, `R` prints out which block is running, so naming blocks is useful if you want to know which one takes a long time. After the block name, you can specify [chunk options](https://yihui.org/knitr/options/). For example, `echo` controls whether the code is printed in the document. By default, output is printed in the document in monospace:
 
 ```{r, echo = FALSE}
 head(mtcars)
@@ -109,8 +95,7 @@ mtcars |>
        y = "Horsepower")
 ```
 
-Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). 
-These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
+Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
 
 ### Tables
 
@@ -122,17 +107,14 @@ mtcars |>
   knitr::kable()
 ```
 
-We can summarize model results with a table. 
-For instance, suppose we fit a linear regression model:
+We can summarize model results with a table. For instance, suppose we fit a linear regression model:
 
 ```{r}
 #| echo: true
 model1 <- lm(mpg ~ disp + hp + drat, data = mtcars)
 ```
 
-It is *not* appropriate to simply print `summary(model1)` into the report. 
-If we want the reader to understand what models we have fit and what their results are, we should provide a nicely formatted table. 
-A simple option is to use the `tidy()` function from the `broom` package to get a data frame of the model fit, and simply report that as a table.
+It is *not* appropriate to simply print `summary(model1)` into the report. If we want the reader to understand what models we have fit and what their results are, we should provide a nicely formatted table. A simple option is to use the `tidy()` function from the `broom` package to get a data frame of the model fit, and simply report that as a table.
 
 ```{r }
 #| results: "asis"

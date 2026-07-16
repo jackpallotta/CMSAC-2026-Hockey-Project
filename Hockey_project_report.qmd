@@ -24,9 +24,11 @@ https://rentosaijo.github.io/nhlscraper/logo.png \<- nhlscraper logo if we want 
 
 ## Introduction
 
-Describe the problem and why it is important.
+In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after any stoppage, such as period-end, icing, goal, and penalties. Faceoffs can also occur at varying leverage states in a game. High leverage in hockey is when certain states of a game, such as score and strength, allow for a team and players to have a higher probability of success throughout the game.
 
 ## Data
+
+The data used throughout the project is pulled from the publicly available nhlscraper R package created by Rento Saijo. 
 
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 
@@ -60,8 +62,7 @@ Bulleted lists can be written with asterisks:
 
 Mathematics can be written with LaTeX syntax using dollar signs. For instance, using single dollar signs we can write inline math: $(-b \pm \sqrt{b^2 - 4ac})/2a$.
 
-To write math in "display style", i.e. displayed on its own line centered on the page, we use double dollar signs:
-$$x^2 + y^2 = 1$$
+To write math in "display style", i.e. displayed on its own line centered on the page, we use double dollar signs: $$x^2 + y^2 = 1$$
 
 ### Code blocks
 

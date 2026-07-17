@@ -280,15 +280,20 @@ summary(test.mod)
 
 test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
 
+train_data$pred_prob = predict(test.mod, newdata = train_data, type = "response")
+
 test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
 
 table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
 
 roc_obj4 = roc(test_data$future_shot, test_data$pred_prob)
+roc_obj3 = roc(train_data$future_shot, train_data$pred_prob)
 
 auc(roc_obj4) #0.8596
+auc(roc_obj3)
 
 
+#tidy(test.mod, exponentiate = TRUE, conf.int = TRUE) # me no likey
 
 #Following Models and code looking at model accuracy (ROC and AUC) all for the question do Face-offs matter
 

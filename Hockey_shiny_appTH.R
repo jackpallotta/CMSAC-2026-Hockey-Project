@@ -3,6 +3,7 @@ require(mgcv)
 require(nhlscraper)
 require(shiny)
 require(tidyverse)
+require(pROC)
 pbp_cleaned = readRDS("pbp_cleaned.rds")
 
 #data set of events within five-seconds after a face-off from the full 
@@ -113,6 +114,8 @@ train_data = events_model |>
 test_data = events_model |>
   filter(!faceoff_row %in% train_ids)
 
+roc_obj = roc( response = test_data$future_shot,
+  predictor = test_data$pred_prob)
 
 test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
                  s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
@@ -124,7 +127,9 @@ test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
 
 test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
 
-table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
+prop.table(table(Actual = test_data$future_shot, Predicted = test_data$pred_class))
+
+
 
 
 #Modeling probability of a shot attempt following a face-off
@@ -144,6 +149,12 @@ nhl.mod_pred_binary = ifelse(nhl.mod_pred_prob > 0.5, 1, 0)
 #pretty solid BRIER Score of 0.086
 mean((nhl.mod_pred_binary - nhl.mod_pred_prob)^2)
 
+#confusion matrix
+prop.table(table("Predicted" = factor(nhl.mod_pred_class, levels = c("Win", "Loss")), 
+      "Observed" = factor(shot_results$future_shot, levels = c("TRUE", "FALSE"))))
+
+#class balance
+prop.table(table(shot_results$future_shot))
 
 #checking the accuracy of the predictions of the shot probabilities
 #creating a new variable shot_prob of the probability of shots following a face-off
@@ -182,7 +193,9 @@ shot_roc |>
   ggplot(aes(x = 1 - specificity , y = sensitivity)) + #1-specificity (false pos. rate)
   geom_path() +
   geom_abline(slope = 1, intercept = 0, 
-              linetype = "dashed")
+              linetype = "dashed") + 
+  theme_bw() + 
+  labs(title = "ROC plot")
 
 #getting started with shiny
 

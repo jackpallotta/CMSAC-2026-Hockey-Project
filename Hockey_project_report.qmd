@@ -1,5 +1,5 @@
 ---
-title: "Hockey Project Report"
+title: "Quantifying Faceoff Value and High Leverage Performance in the NHL"
 author:
   - Chloe Guagliano
   - Tess Hinkle
@@ -36,13 +36,29 @@ Describe the data you’re using in detail, where you accessed it, along with re
 
 Describe the modeling techniques you chose, their assumptions, justifications for why they are appropriate for the problem, and how you're comparing/evaluating the different methods.
 
+### High Leverage Performance
+
+methods for High leverage performance
+
+### Quantifying Faceoff Value
+
+methods for quantifying faceoff value
+
 ## Results
 
 Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
 
+### High Leverage Performance
+
+### Quantifying Faceoff Value
+
 ## Discussion
 
 Give your conclusions and summarize what you have learned with regards to your question of interest. Are there any limitations with the approaches you used? What do you think are the next steps to follow-up your project?
+
+### High Leverage Performance
+
+### Quantifying Faceoff Value
 
 ## Appendix: A quick tutorial
 

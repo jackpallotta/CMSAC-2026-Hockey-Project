@@ -204,10 +204,14 @@ nhl.mod = readRDS("nhl_mod.rds")
 
 ui = fluidPage(
   titlePanel("NHL Faceoff Shot Probability"),
-  h4("Description"),
+  h4("App Description"),
   p("This app is designed to allow the user to create a sequence of events directly 
     following a faceoff and calculate the probability of a future shot attempt 
-    after that sequence of events"),
+    after that sequence of events. The User is able to click on the rink to 
+    determine the positions of each event. However, the first event will always 
+    be a faceoff and the user's click on the rink will be automatically 'snapped' 
+    to the nearest faceoff dot. The user does have to manually change the seconds 
+    elapsed in the game for each event."),
   sidebarLayout(
     sidebarPanel(
       checkboxInput("isEmptyNetFor", "Net is Empty for Event Team", FALSE),

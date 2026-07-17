@@ -201,8 +201,13 @@ shot_roc |>
 
 nhl.mod = readRDS("nhl_mod.rds")
 
+
 ui = fluidPage(
   titlePanel("NHL Faceoff Shot Probability"),
+  h4("Description"),
+  p("This app is designed to allow the user to create a sequence of events directly 
+    following a faceoff and calculate the probability of a future shot attempt 
+    after that sequence of events"),
   sidebarLayout(
     sidebarPanel(
       checkboxInput("isEmptyNetFor", "Net is Empty for Event Team", FALSE),
@@ -211,15 +216,15 @@ ui = fluidPage(
       selectInput("strengthState","Strength State",choices = levels(events_model$strengthState)),
       selectInput("scoreState","Score State",choices = levels(events_model$scoreState)),
       selectInput("eventTypeDescKey", "Event Type" , choices = levels(events_model$eventTypeDescKey)),
-    actionButton("predict", "Calculate Probability"),
-    actionButton("reset", "Reset Sequence"))
-  mainPanel(
-    plotOutput("rink",
-      click = "rink_click",
-      height = "600px"),
-    h3("Event Sequence"),
-    tableOutput("events"),
-    h2(textOutput("probability")))))
+      actionButton("predict", "Calculate Probability"),
+      actionButton("reset", "Reset Sequence")),
+    mainPanel(
+      plotOutput("rink",
+                 click = "rink_click",
+                 height = "600px"),
+      h3("Event Sequence"),
+      tableOutput("events"),
+      h2(textOutput("probability")))))
 
 server = function(input, output) {
   #stores the selected faceoff location
@@ -261,8 +266,9 @@ server = function(input, output) {
   
   #draws the rink
   output$rink = renderPlot({
-     draw_NHL_rink() +
-       coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43))
+    draw_NHL_rink() +
+      coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43)) +
+      box(which = "figure")
     
     if (nrow(sequence$events) >0) {
       graphics::points(x = sequence$events$xCoord, y = sequence$events$yCoord, 
@@ -270,7 +276,7 @@ server = function(input, output) {
       
       graphics::lines(sequence$events$xCoord, sequence$events$yCoord, col="green2", lwd=2)}
   })
-
+  
   #calculates probability
   observeEvent(input$predict, {
     req(nrow(sequence$events)>0)
@@ -285,19 +291,19 @@ server = function(input, output) {
       secondsElapsedInGame = input$secondsElapsedInGame,
       
       strengthState = factor(input$strengthState,
-        levels = levels(train_data$strengthState)),
+                             levels = levels(train_data$strengthState)),
       
       scoreState = factor(input$scoreState,
-        levels = levels(train_data$scoreState)),
+                          levels = levels(train_data$scoreState)),
       
       isEmptyNetFor = factor(input$isEmptyNetFor,
-        levels = levels(train_data$isEmptyNetFor)),
+                             levels = levels(train_data$isEmptyNetFor)),
       
       isEmptyNetAgainst = factor(input$isEmptyNetAgainst,
-        levels = levels(train_data$isEmptyNetAgainst)),
+                                 levels = levels(train_data$isEmptyNetAgainst)),
       
       eventTypeDescKey = factor(current$eventTypeDescKey, 
-        levels = levels(train_data$eventTypeDescKey)))
+                                levels = levels(train_data$eventTypeDescKey)))
     
     prob = predict(
       nhl.mod, newdata = new_data,

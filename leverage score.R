@@ -29,9 +29,9 @@ leverageVariables <- faceoffsCleaned |>
          logAvailableWindow = log1p(availableSATWindow))
 
 # win probability model
-wp_glm <- glm(wonGame ~ goalDifferential * ns(secondsRemaining, df = 7) +
-                zoneCode * situationCode + isOT,
-              data = leverageVariables, family = binomial(link = "logit"))
+wp_gam <- bam(wonGame ~ goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8) +
+                zoneCode + situationCode + isOT,
+              data = leverageVariables, family = binomial(), method = "fREML", discrete = TRUE)
 
 # create a copy of every faceoff scenario for a goal scored
 goalForData <- leverageVariables |>
@@ -48,15 +48,15 @@ goalAgainstData <- leverageVariables |>
 # predict three win probabilities and calculate the impact of a goal
 leverageVariables <- leverageVariables |>
   mutate(currentWinProbability = predict(
-    wp_glm, newdata = leverageVariables,
+    wp_gam, newdata = leverageVariables,
     type = "response"),
     
     winProbabilityGoalFor = predict(
-      wp_glm, newdata = goalForData,
+      wp_gam, newdata = goalForData,
       type = "response"),
     
     winProbabilityGoalAgainst = predict(
-      wp_glm, newdata = goalAgainstData,
+      wp_gam, newdata = goalAgainstData,
       type = "response"),
     
     goalForImpact = winProbabilityGoalFor - currentWinProbability,
@@ -64,13 +64,12 @@ leverageVariables <- leverageVariables |>
     totalGoalSwing = winProbabilityGoalFor - winProbabilityGoalAgainst)
 
 xGF_bam <- bam(xGFor5 ~ goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8, bs = "cr") +
-                 zoneCode + situationCode + s(logAvailableWindow, k = 5, bs = "cr"),
-               family = tw(link = "log"), method = "fREML", discrete = TRUE, nthreads = 4, data = leverageVariables)
+                 zoneCode + situationCode + isOT + s(logAvailableWindow, k = 5, bs = "cr"),
+               family = tw(link = "log"), method = "fREML", discrete = TRUE, data = leverageVariables)
 
-xGA_bam <- bam(xGAgainst5 ~
-                 goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8, bs = "cr") +
-                 zoneCode + situationCode + s(logAvailableWindow, k = 5, bs = "cr"),
-               family = tw(link = "log"), method = "fREML", discrete = TRUE, nthreads = 4, data = leverageVariables)
+xGA_bam <- bam(xGAgainst5 ~ goalDifferential + s(secondsRemaining, by = goalDifferential, k = 8, bs = "cr") +
+                 zoneCode + situationCode + isOT + s(logAvailableWindow, k = 5, bs = "cr"),
+               family = tw(link = "log"), method = "fREML", discrete = TRUE, data = leverageVariables)
 
 leverageVariables <- leverageVariables |>
   mutate(predictedxGF_5 = predict(

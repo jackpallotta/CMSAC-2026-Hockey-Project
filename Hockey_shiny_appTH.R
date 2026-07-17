@@ -4,6 +4,7 @@ require(nhlscraper)
 require(shiny)
 require(tidyverse)
 require(pROC)
+require(gt)
 pbp_cleaned = readRDS("pbp_cleaned.rds")
 
 #data set of events within five-seconds after a face-off from the full 
@@ -114,8 +115,15 @@ train_data = events_model |>
 test_data = events_model |>
   filter(!faceoff_row %in% train_ids)
 
+test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
+
+train_data$pred_prob = predict(test.mod, newdata = train_data, type = "response")
+
+test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
+
 roc_obj = roc( response = test_data$future_shot,
   predictor = test_data$pred_prob)
+
 
 test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
                  s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
@@ -127,7 +135,9 @@ test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
 
 test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
 
-prop.table(table(Actual = test_data$future_shot, Predicted = test_data$pred_class))
+#confusion matrix
+table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
+
 
 
 
@@ -148,6 +158,8 @@ nhl.mod_pred_binary = ifelse(nhl.mod_pred_prob > 0.5, 1, 0)
 
 #pretty solid BRIER Score of 0.086
 mean((nhl.mod_pred_binary - nhl.mod_pred_prob)^2)
+
+
 
 #confusion matrix
 prop.table(table("Predicted" = factor(nhl.mod_pred_class, levels = c("Win", "Loss")), 

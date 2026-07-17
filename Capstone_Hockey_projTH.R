@@ -293,6 +293,7 @@ auc(roc_obj4) #0.8596
 auc(roc_obj3)
 
 
+
 #tidy(test.mod, exponentiate = TRUE, conf.int = TRUE) # me no likey
 
 #Following Models and code looking at model accuracy (ROC and AUC) all for the question do Face-offs matter

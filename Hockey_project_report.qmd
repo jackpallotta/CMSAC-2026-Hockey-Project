@@ -1,5 +1,5 @@
 ---
-title: "Quantifying Faceoff Value and High Leverage Performance in the NHL"
+title: "Quantifying Faceoff Value and Identifying High Leverage Performance in the NHL"
 author:
   - Chloe Guagliano
   - Tess Hinkle

@@ -231,7 +231,8 @@ ui = fluidPage(
       numericInput("secondsElapsedInGame","Seconds Elapsed in Game",min = 0,max = 3600,value = 1200),
       selectInput("strengthState","Strength State",choices = levels(events_model$strengthState)),
       selectInput("scoreState","Score State",choices = levels(events_model$scoreState)),
-      selectInput("eventTypeDescKey", "Event Type" , choices = levels(events_model$eventTypeDescKey)),
+      selectInput("eventTypeDescKey", "Event Type" , choices = c("blocked-shot","giveaway","hit","missed-shot",
+                                                                 "penalty", "shot-on-goal","takeaway")),
       actionButton("predict", "Calculate Probability"),
       actionButton("reset", "Reset Sequence")),
     mainPanel(

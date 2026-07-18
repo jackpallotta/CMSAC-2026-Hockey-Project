@@ -282,9 +282,13 @@ server = function(input, output) {
   
   #draws the rink
   output$rink = renderPlot({
-    draw_NHL_rink() +
-      coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43)) +
-      box(which = "figure")
+    draw_NHL_rink()
+    coord_fixed(xlim = c(-100, 100),ylim = c(-43, 43))
+    
+    axis(side = 1, at = c(-100,0, 100), labels = c("-100", "0", "100"))
+    axis(side = 4, at = c(-43, 0 , 43), labels = c("-43", "0", "43"))
+    
+    box(which = "outer")
     
     if (nrow(sequence$events) >0) {
       graphics::points(x = sequence$events$xCoord, y = sequence$events$yCoord, 

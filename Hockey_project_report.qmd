@@ -28,7 +28,7 @@ In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after
 
 ## Data
 
-The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. The data that we specifically looked at from the nhlscraper package was NHL game play by play data for the 2021-2022 to the 2025-2026 seasons. We ultimately worked with two unique data sets compiled from one large 5 season play by play data set.
+The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. The data that we specifically looked at from the nhlscraper package was NHL game play by play data for the 2021-2022 to the 2025-2026 seasons. We ultimately worked with two unique data sets compiled from one large 5 season play by play data set. One of our data sets looks at the events that occur within 5 seconds of a faceoff. The other data set looks at the faceoff event itself and mirrors the faceoff for hte home and away team.
 
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 

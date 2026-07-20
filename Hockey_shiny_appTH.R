@@ -192,7 +192,7 @@ roc_obj2 = roc(
   predictor = shot_results$shot_prob,
   quiet = TRUE)
 
-auc(roc_obj2) #AUC is 0.858
+auc(roc_obj2) #AUC is 0.946
 
 #creating an ROC curve
 #library(pROC)

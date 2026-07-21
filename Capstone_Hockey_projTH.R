@@ -243,7 +243,7 @@ ggplot(shot_calibration_check,
   labs(x = "Mean Predicted Probability", y = "Observed Probability",
        title = "Calibration Plot") +
   coord_equal() +
-  theme_minimal()
+  theme_bw()
 
 
 ### End of moving things over from shiny app

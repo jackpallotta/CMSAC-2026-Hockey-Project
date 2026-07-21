@@ -13,5 +13,7 @@ Raw FOW% treats every faceoff equally, but does not adequately capture players t
 8. Run the ‘wp model.R’ and ‘xG model.R’ scripts to compare modeling techniques for goal value and goal likelihood within 5 seconds of the faceoff.
 9. Run the ‘leverage score analysis.R’ script to split the leverage scores into natural clusters and create data visualizations.
 # Shiny App Steps
-1. Save the 'pbp_cleaned.rds' file at the end of the 'pbp.R' script.
-2. Run the 'Hockey_shiny_appTH.R' to create the NHL Faceoff Simulator app.
+1. Open the shiny folder
+2. Run the various RDS files in the folder
+3. Run the 'app.R' script to run the app locally or go to this website: https://nhlfaceoffsimulator.shinyapps.io/shiny/
+4. To view the model accuracy and model used in the app go to and read the 'Capstone_Hockey_projTH.R' script

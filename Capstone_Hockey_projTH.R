@@ -233,6 +233,19 @@ shot_roc |>
   theme_bw() + 
   labs(title = "ROC Plot of Predicted Future Shot Attempts", y = "True Positive Rate", x = "False Positive Rate")
 
+
+ggplot(shot_calibration_check,
+       aes(x = predicted, y = actual)) +
+  geom_abline(intercept = 0, slope = 1,
+              linetype = "dashed") +
+  geom_line(color = "blue") +
+  geom_point(shape = 15, size = 3, color = "blue", alpha = 0.5) +
+  labs(x = "Mean Predicted Probability", y = "Observed Probability",
+       title = "Calibration Plot") +
+  coord_equal() +
+  theme_minimal()
+
+
 ### End of moving things over from shiny app
 
 

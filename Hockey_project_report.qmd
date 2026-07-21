@@ -33,10 +33,12 @@ The data used throughout the project is pulled from the publicly available [nhls
 ```{r}
 require(ggplot2)
 require(tidyverse)
+require(pROC)
 theme_set(theme_bw())
 events_after_faceoff2 = readRDS("Shiny/events_after_faceoff2.rds")
 events_model = readRDS("Shiny/events_model.rds")
 train_data = readRDS("Shiny/train_data.rds")
+nhl.mod = readRDS("Shiny/nhl_mod.RDS")
 ```
 
 ### EDA
@@ -72,6 +74,8 @@ methods for High leverage performance
 
 ### Quantifying Faceoff Value
 
+The data was split into a 75% training and a 25% testing Holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer.
+
 methods for quantifying faceoff value
 
 ## Results
@@ -81,8 +85,62 @@ Describe your results. This can include tables and plots showing your results, a
 ### High Leverage Performance
 
 ### Quantifying Faceoff Value
-The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur.
 
+The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur. The following plot is a calibration plot of the model showing how the model accurately predicts on the low and high end of shot probabilities, but is missing predctions in the middle range.
+
+```{r}
+shot_results = train_data |>
+  select(future_shot, eventTypeDescKey, xCoord, yCoord,distance, scoreState, strengthState,
+         secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  drop_na() |>
+  mutate(shot_prob = predict(nhl.mod, type = "response"),
+         pred_decile2 = ntile(shot_prob, 10))
+
+#checks each level of predictions withe the actual results
+shot_calibration_check =  shot_results |>
+  group_by(pred_decile2) |>
+  summarize(
+    predicted = mean(shot_prob),
+    actual = mean(future_shot),
+    n = n(),
+    .groups = "drop")
+shot_calibration_check
+ggplot(shot_calibration_check,
+       aes(x = predicted, y = actual)) +
+  geom_abline(intercept = 0, slope = 1,
+              linetype = "dashed") +
+  geom_line(color = "blue") +
+  geom_point(shape = 15, size = 3, color = "blue", alpha = 0.5) +
+  labs(x = "Predicted Probability", y = "Observed Probability",
+       title = "Calibration Plot") +
+  coord_equal() +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,  size = 15))
+```
+
+The following plot is a ROC plot showing how the model is also quite accurate.
+
+```{r}
+roc_obj2 = roc(
+  response = shot_results$future_shot,
+  predictor = shot_results$shot_prob,
+  quiet = TRUE)
+
+auc(roc_obj2)
+
+shot_roc = tibble(threshold = c(roc_obj2$thresholds),
+                  specificity = roc_obj2$specificities,
+                  sensitivity = roc_obj2$sensitivities)
+
+shot_roc |> 
+  ggplot(aes(x = 1 - specificity , y = sensitivity)) + #1-specificity (false pos. rate)
+  geom_path() +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed") + 
+  theme_bw() + 
+  labs(title = "ROC Plot of Predicted Future Shot Attempts", y = "True Positive Rate", x = "False Positive Rate") +
+  theme(plot.title = element_text(hjust = 0.5, size = 15))
+```
 
 ## Discussion
 

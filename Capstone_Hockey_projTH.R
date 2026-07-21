@@ -293,6 +293,23 @@ auc(roc_obj4) #0.8596
 auc(roc_obj3)
 
 
+shot_results = events_after_faceoff2 |>
+  select(is_shot_atmpt, leftRight,zoneCode, xCoord, yCoord,distance, 
+         periodNumber, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  drop_na() |>
+  mutate(shot_prob = predict(gam.mod5, type = "response"),
+         pred_decile2 = ntile(shot_prob, 10))
+
+shot_calibration_check =  shot_results |>
+  group_by(pred_decile2) |>
+  summarize(
+    predicted = mean(shot_prob),
+    actual = mean(is_shot_atmpt),
+    n = n(),
+    .groups = "drop")
+
+shot_calibration_check #only slightly off
+
 
 #tidy(test.mod, exponentiate = TRUE, conf.int = TRUE) # me no likey
 

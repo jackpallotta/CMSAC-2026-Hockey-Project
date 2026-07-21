@@ -1,5 +1,5 @@
 # CMSAC-2026-Hockey-Project
-Raw FOW% treats every faceoff equally, but does not adequately capture players that consistently win faceoffs that matter most. From watching game footage, we know specific in-game events and states can lead to future scoring opportunity directly following a faceoff. We call those faceoffs "high leverage," where winning or losing the faceoff could greatly impact the game’s outcome. Our research focuses on two main questions:
+Raw FOW% treats every faceoff equally, but does not adequately capture players that consistently win faceoffs that matter most. From watching game footage, we know specific game states can lead to future scoring opportunity directly following a faceoff. We call those faceoffs "high leverage," where winning or losing the faceoff could greatly impact the game’s outcome. Our research focuses on two main questions:
 1. Are certain players better in high leverage situations? 
 2. Can we quantify faceoff value?
 # Leverage Score Steps

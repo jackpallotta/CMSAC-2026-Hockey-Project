@@ -802,7 +802,7 @@ barplot4 = events_after_faceoff2 |>
   geom_bar() +
   facet_wrap(~ teams) +
   labs(fill = "Is Shot Attempt", title = "Shot Attempts between three NHL Teams") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") + theme_bw()
 barplot4
 
 barplot5 = events_after_faceoff2 |>

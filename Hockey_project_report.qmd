@@ -30,6 +30,36 @@ In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after
 
 The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. The data that we specifically looked at from the nhlscraper package was NHL game play by play data for the 2021-2022 to the 2025-2026 seasons. We ultimately worked with two unique data sets compiled from one large 5 season play by play data set. One of our data sets looks at the events that occur within 5 seconds of a faceoff. The other data set looks at the faceoff event itself and mirrors the faceoff for hte home and away team.
 
+```{r}
+require(ggplot2)
+require(tidyverse)
+theme_set(theme_bw())
+events_after_faceoff2 = readRDS("Shiny/events_after_faceoff2.rds")
+events_model = readRDS("Shiny/events_model.rds")
+train_data = readRDS("Shiny/train_data.rds")
+```
+
+### EDA
+
+#### Quantifying Faceoff Value
+
+The following graphs are EDA for the Quantifying Faceoff Value question. The bar chart of shot attempts between three NHL teams (Carolina, Chicago, and Pittsburgh) depicts that the majority of shot attempts for teams occur in the offensive zone. Also, over 50% of shot attempts are successful for these teams.
+
+```{r}
+#| fig-cap: "The bar chart shows the count of shot attempts in each zone and whether the shot attempt was successful or not."
+barplot4 = events_after_faceoff2 |>
+  filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
+  mutate(teams = case_when(eventOwnerTeamId == 12 ~ "CAR",
+                           eventOwnerTeamId == 16 ~ "CHI",
+                           eventOwnerTeamId == 5 ~ "PIT")) |>
+  ggplot(aes(x = zoneCode, fill = as.factor(is_shot_atmpt))) +
+  geom_bar() +
+  facet_wrap(~ teams) +
+  labs(fill = "Is Shot Attempt", title = "Shot Attempts between three NHL Teams") +
+  theme(legend.position = "bottom")
+barplot4
+```
+
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 
 ## Methods
@@ -51,6 +81,8 @@ Describe your results. This can include tables and plots showing your results, a
 ### High Leverage Performance
 
 ### Quantifying Faceoff Value
+The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur.
+
 
 ## Discussion
 

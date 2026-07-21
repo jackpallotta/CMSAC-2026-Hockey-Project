@@ -231,7 +231,8 @@ shot_roc |>
   geom_abline(slope = 1, intercept = 0, 
               linetype = "dashed") + 
   theme_bw() + 
-  labs(title = "ROC Plot of Predicted Future Shot Attempts", y = "True Positive Rate", x = "False Positive Rate")
+  labs(title = "ROC Plot of Predicted Future Shot Attempts", y = "True Positive Rate", x = "Falsehttp://127.0.0.1:14214/graphics/8a00252e-0306-497d-b222-34add5b3697a.png Positive Rate") +
+  theme(plot.title = element_text(hjust = 0.5, size = 15))
 
 
 ggplot(shot_calibration_check,
@@ -243,7 +244,8 @@ ggplot(shot_calibration_check,
   labs(x = "Mean Predicted Probability", y = "Observed Probability",
        title = "Calibration Plot") +
   coord_equal() +
-  theme_bw()
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,  size = 15))
 
 
 ### End of moving things over from shiny app

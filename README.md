@@ -1,4 +1,7 @@
 # CMSAC-2026-Hockey-Project
+Raw FOW% treats every faceoff equally, but does not adequately capture players that consistently win faceoffs that matter most. From watching game footage, we know specific in-game events and states can lead to future scoring opportunity directly following a faceoff. We call those faceoffs "high leverage," where winning or losing the faceoff could greatly impact the game’s outcome. Our research focuses on two main questions:
+1. Are certain players better in high leverage situations? 
+2. Can we quantify faceoff value?
 # Leverage Score Steps
 1. Run the ‘pbp.R’ script to scrape NHL play-by-play into the console and clean the data.
 2. Run the ‘schedule.R’ script to scrape the NHL season schedule into the console and clean the data.

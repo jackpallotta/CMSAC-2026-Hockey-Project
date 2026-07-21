@@ -3,7 +3,6 @@ library(tidyverse)
 library(nhlscraper)
 pbp_cleaned <- readRDS("pbp_cleaned.rds")
 schedule <- readRDS("schedule.rds")
-rosters <- readRDS("rosters.rds")
 players <- readRDS("players.rds")
 careerGameNumbersCleaned <- readRDS("careerGameNumbersCleaned.rds")
 

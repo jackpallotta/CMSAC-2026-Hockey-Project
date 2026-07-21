@@ -10,11 +10,232 @@ require(car)
 require(mgcv)
 require(lme4)
 require(pROC)
+require(arrow)
+
 
 theme_set(theme_bw())
 
 faceoffs_cleaned = readRDS("faceoffsCleaned.rds")
 faceoffData = readRDS("faceoffData.rds")
+
+#moved from shiny app----
+pbp_cleaned = readRDS("pbp_cleaned.rds")
+
+#data set of events within five-seconds after a face-off from the full 
+#play by play data pulled from the pbp.R file
+pbp_faceoffs = pbp_cleaned |>
+  mutate(row_id = row_number()) |>
+  filter(eventTypeDescKey == "faceoff") |>
+  select(faceoff_row = row_id,
+         gameId,                 
+         periodNumber,                 
+         faceoff_time = secondsElapsedInGame) |>
+  mutate(faceoff_end = faceoff_time + 5)
+
+events_after_faceoff2 = pbp_faceoffs |>
+  inner_join(
+    pbp_cleaned,
+    by = join_by(
+      gameId == gameId,
+      periodNumber == periodNumber,
+      faceoff_time < secondsElapsedInGame,   
+      faceoff_end >= secondsElapsedInGame)) |>
+  mutate(fo_success = as.factor(ifelse(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey =="goal", 1, 0))) |>
+  mutate(is_shot_atmpt = as.numeric(eventTypeDescKey == "shot-on-goal" | eventTypeDescKey == "missed-shot" | eventTypeDescKey == "goal" )) |>
+  mutate(faceoffDotCategory = case_when(xCoord == -69 & yCoord == 22 ~ '1',
+                                        xCoord == -20 & yCoord == 22 ~ '2',
+                                        xCoord == 20 & yCoord == 22 ~ '3',
+                                        xCoord == 69 & yCoord == 22 ~ '4',
+                                        xCoord == -69 & yCoord == -22 ~ '5',
+                                        xCoord == -20 & yCoord == -22 ~ '6',
+                                        xCoord == 20 & yCoord == -22 ~ '7',
+                                        xCoord == 69 & yCoord == -22 ~ '8',
+                                        xCoord == 0 & yCoord == 0 ~ '0')) |>
+  mutate(scoreState = as.factor(case_when(goalDifferential >= 4 | goalDifferential <= -4 ~ '+/- 4 or greater',
+                                          goalDifferential %in% c(-3,3) ~ '+/- 3',
+                                          goalDifferential %in% c(-2,2) ~ '+/- 2',
+                                          goalDifferential %in% c(-1,1) ~ '+/- 1',
+                                          goalDifferential == 0 ~ '0'))) |>
+  mutate(leftRight = as.factor(case_when(homeTeamDefendingSide == 'left' & eventTeamVenue == 'home'~
+                                           if_else(faceoffDotCategory %in% c('1','2','3','4'),'L','R'),
+                                         homeTeamDefendingSide == 'left' & eventTeamVenue == 'away'~
+                                           if_else(faceoffDotCategory %in% c('5','6','7','8'),'L','R'),
+                                         homeTeamDefendingSide == 'right' & eventTeamVenue == 'home'~
+                                           if_else(faceoffDotCategory %in% c('5','6','7','8'),'L','R'),
+                                         homeTeamDefendingSide == 'right' & eventTeamVenue == 'away'~
+                                           if_else(faceoffDotCategory %in% c('1','2','3','4'),'L','R')))) |>
+  mutate(zoneCode = as.factor(if_else(zoneCode == 'N' & faceoffDotCategory != 'C',
+                                      case_when(homeTeamDefendingSide == 'left' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('2','6') ~ 
+                                                  'C-NZ',
+                                                homeTeamDefendingSide == 'left' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('3','7') ~
+                                                  'F-NZ',
+                                                homeTeamDefendingSide == 'left' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('2','6') ~
+                                                  'F-NZ',
+                                                homeTeamDefendingSide == 'left' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('3','7') ~
+                                                  'C-NZ',
+                                                homeTeamDefendingSide == 'right' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('2','6') ~
+                                                  'F-NZ',
+                                                homeTeamDefendingSide == 'right' & eventTeamVenue == 'home' & faceoffDotCategory %in% c('3','7') ~
+                                                  'C-NZ',
+                                                homeTeamDefendingSide == 'right' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('2','6') ~
+                                                  'C-NZ',
+                                                homeTeamDefendingSide == 'right' & eventTeamVenue == 'away' & faceoffDotCategory %in% c('3','7') ~
+                                                  'F-NZ'),zoneCode))) |>
+  mutate(zoneCode = as.factor(if_else(zoneCode == 'N','C', zoneCode)))|>
+  mutate(situationDescriptor = as.factor(case_when(is.na(zoneCode) | is.na(leftRight) ~ NA_character_,
+                                                   TRUE ~ paste(zoneCode, leftRight, sep = ' ')))) |>
+  mutate(situationLinkage = as.factor(case_when(situationDescriptor %in% c('D L', 'O R') ~
+                                                  'A',
+                                                situationDescriptor %in% c('D R', 'O L') ~
+                                                  'B',
+                                                situationDescriptor %in% c('F-NZ R', 'C-NZ L') ~
+                                                  'C',
+                                                situationDescriptor %in% c('F-NZ L', 'C-NZ R') ~
+                                                  'D',
+                                                situationDescriptor == 'C R' ~
+                                                  'E'))) |>
+  mutate(periodNumber = as.factor(periodNumber)) |>
+  mutate(isEmptyNetFor = as.factor(isEmptyNetFor)) |>
+  mutate(isEmptyNetAgainst = as.factor(isEmptyNetAgainst)) |>
+  mutate(strengthState = as.factor(strengthState)) |>
+  mutate(eventTypeDescKey = as.factor(eventTypeDescKey)) |>
+  filter(periodType == "REG")
+
+saveRDS(events_after_faceoff2, "events_after_faceoff2.rds")
+
+
+
+events_after_faceoff2 = readRDS("events_after_faceoff2.rds")
+
+events_after_faceoff2 = events_after_faceoff2 |>
+  group_by(faceoff_row) |>
+  mutate(future_shot = sapply(seq_len(n()), function(i) {
+    any(eventTypeDescKey[(i + 1):n()] %in% c("shot-on-goal","missed-shot","goal"))})
+  ) |>
+  ungroup()
+
+events_model = events_after_faceoff2 |> #stopping it if a goal is entered in the sequence
+  filter(eventTypeDescKey != "goal") |>
+  mutate(eventTypeDescKey = as.factor(eventTypeDescKey)) |>
+  mutate(strengthState = as.factor(strengthState))
+
+saveRDS(events_model, "events_model.rds")
+
+#testing and training new model
+set.seed(071526)
+
+faceoff_ids = unique(events_model$faceoff_row)
+
+train_ids = sample(
+  faceoff_ids,
+  size = 0.75 * length(faceoff_ids))
+
+train_data = events_model |>
+  filter(faceoff_row %in% train_ids)
+
+saveRDS(train_data, "train_data.rds")
+
+test_data = events_model |>
+  filter(!faceoff_row %in% train_ids)
+
+test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
+
+train_data$pred_prob = predict(test.mod, newdata = train_data, type = "response")
+
+test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
+
+roc_obj = roc( response = test_data$future_shot,
+               predictor = test_data$pred_prob)
+
+
+test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(test.mod)
+
+test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
+
+test_data$pred_class = ifelse(test_data$pred_prob > 0.5, 1, 0)
+
+#confusion matrix
+table(Actual = test_data$future_shot, Predicted = test_data$pred_class)
+
+
+
+
+
+#Modeling probability of a shot attempt following a face-off
+#renaming test.mod
+nhl.mod =  bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(nhl.mod)
+saveRDS(nhl.mod, "nhl_mod.rds")
+
+#for every obs the pred prob of a shot attempt
+nhl.mod_pred_prob = predict(nhl.mod, type = "response") 
+nhl.mod_pred_class = ifelse(nhl.mod_pred_prob > 0.5, "Win", "Loss") 
+nhl.mod_pred_binary = ifelse(nhl.mod_pred_prob > 0.5, 1, 0)
+
+#pretty solid BRIER Score of 0.086
+mean((nhl.mod_pred_binary - nhl.mod_pred_prob)^2)
+
+
+
+#checking the accuracy of the predictions of the shot probabilities
+#creating a new variable shot_prob of the probability of shots following a face-off
+shot_results = train_data |>
+  select(future_shot, eventTypeDescKey, xCoord, yCoord,distance, scoreState, strengthState,
+         secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  drop_na() |>
+  mutate(shot_prob = predict(nhl.mod, type = "response"),
+         pred_decile2 = ntile(shot_prob, 10))
+
+#checks each level of predictions withe the actual results
+shot_calibration_check =  shot_results |>
+  group_by(pred_decile2) |>
+  summarize(
+    predicted = mean(shot_prob),
+    actual = mean(future_shot),
+    n = n(),
+    .groups = "drop")
+shot_calibration_check #only slightly off
+
+roc_obj2 = roc(
+  response = shot_results$future_shot,
+  predictor = shot_results$shot_prob,
+  quiet = TRUE)
+
+auc(roc_obj2) #AUC is 0.946
+
+#confusion matrix
+prop.table(table("Predicted" = factor(nhl.mod_pred_class, levels = c("Win", "Loss")), 
+                 "Observed" = factor(shot_results$future_shot, levels = c("TRUE", "FALSE"))))
+
+#class balance
+prop.table(table(shot_results$future_shot))
+
+
+#creating an ROC curve
+#library(pROC)
+
+shot_roc = tibble(threshold = c(roc_obj2$thresholds),
+                  specificity = roc_obj2$specificities,
+                  sensitivity = roc_obj2$sensitivities)
+
+shot_roc |> 
+  ggplot(aes(x = 1 - specificity , y = sensitivity)) + #1-specificity (false pos. rate)
+  geom_path() +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed") + 
+  theme_bw() + 
+  labs(title = "ROC Plot of Predicted Future Shot Attempts", y = "True Positive Rate", x = "False Positive Rate")
+
+### End of moving things over from shiny app
+
+
 
 ESPN_games_20242025 = espn_games(season = 20242025)
 head(ESPN_games_20242025)

@@ -1,0 +1,10 @@
+name: shiny
+title:
+username: nhlfaceoffsimulator
+account: nhlfaceoffsimulator
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17629182
+bundleId: 12298787
+url: https://nhlfaceoffsimulator.shinyapps.io/shiny/
+version: 1

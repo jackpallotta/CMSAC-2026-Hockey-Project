@@ -1,6 +1,6 @@
 # CMSAC-2026-Hockey-Project
 # Leverage Score Steps
-1. Run the ‘pbp.R’ script to scrape the NHL public play-by-play into the console and clean the data.
+1. Run the ‘pbp.R’ script to scrape NHL play-by-play into the console and clean the data.
 2. Run the ‘schedule.R’ script to scrape the NHL season schedule into the console and clean the data.
 3. Run the ‘players.R’ script to scrape NHL player bios into the console and clean the data.
 4. Run the ‘gameLogs.R’ script to scrape NHL player career totals into the console and clean the data.

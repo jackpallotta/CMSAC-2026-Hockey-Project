@@ -78,7 +78,7 @@ A simple logistic regression was first tried due to the binary variable of futur
 
 The model uses thin plate regression splines with the basis dimensions (k) capped to avoid overfitting (k = 30 for coordinates, k = 20 for distance, and k = 15 for angle). The model also used fast Restricted Maximum Likelihood to cut down on processing time.
 
-The data was split into a 75% training and a 25% testing Holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer.
+The data was split into a 75% training and a 25% testing holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer. From this training and testing data the model was fit with the training data to help ensure an unbiased evaluation of predictive performance. The training and testing sets were then evaluated to check discrimination (ROC) and calibration. We checked calibration since we are trying to predict a future shot attempt following a sequence of events we need the calibration of the model to be precise.
 
 ## Results
 

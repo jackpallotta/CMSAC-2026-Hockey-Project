@@ -753,12 +753,33 @@ shot_roc |>
 
 
 #attempt at drawing shots on goal and goals on nhl rink
-rink = geom_hockey(league = "NHL")
-shot_data = events_after_faceoff2[(events_after_faceoff2$eventTypeDescKey == "shot-on-goal") |
-                                    (events_after_faceoff2$eventTypeDescKey== "goal"),]
+require(sportyR)
 
-rink + 
-  geom_point(data = shot_data, aes(xCoord, yCoord), alpha = 0.5)
+rink1 = geom_hockey(league = "NHL", display_range = "offense")
+shot_data = events_model[(events_model$future_shot),]
+
+rink1 + 
+  geom_point(data = shot_data, aes(xCoord, yCoord), alpha = 0.1)
+
+future_shot_data = events_model |>
+  select(xCoord, yCoord, future_shot) |>
+  filter(xCoord >= 0) 
+
+ggplot(data = future_shot_data, aes(x = xCoord, y = yCoord)) +
+  geom_point(size = 1, alpha = 0.1) +
+  geom_density_2d(lwd = 1.5) +
+  coord_fixed()
+
+
+shot_atmpt_data = events_model |>
+  select(xCoord, yCoord, is_shot_atmpt) |>
+  filter(xCoord >= 0) |>
+  ggplot(aes(x = xCoord, y = yCoord)) +
+  geom_point(size = 1, alpha = 0.1)
+shot_atmpt_data
+
+
+
 
 events_after_faceoff2 |>
   ggplot(aes(x = distance, y = xG,

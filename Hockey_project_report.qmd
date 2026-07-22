@@ -62,6 +62,19 @@ barplot4 = events_after_faceoff2 |>
 barplot4
 ```
 
+The following looks at a density map of the offensive zone in hockey and where the future shot_attempts took place.
+```{r}
+future_shot_data = events_model |>
+  select(xCoord, yCoord, future_shot) |>
+  filter(xCoord >= 0) 
+
+ggplot(data = future_shot_data, aes(x = xCoord, y = yCoord)) +
+  geom_point(size = 1, alpha = 0.1) +
+  geom_density_2d(lwd = 1.5) +
+  coord_fixed()
+```
+
+
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 
 ## Methods

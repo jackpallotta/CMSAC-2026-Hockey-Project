@@ -63,6 +63,7 @@ barplot4
 ```
 
 The following looks at a 2D kernel density estimation map of the offensive zone in hockey and where the future shot_attempts took place.
+
 ```{r}
 future_shot_data = events_model |>
   select(xCoord, yCoord, future_shot) |>
@@ -73,7 +74,6 @@ ggplot(data = future_shot_data, aes(x = xCoord, y = yCoord)) +
   geom_density_2d(lwd = 1.5) +
   coord_fixed()
 ```
-
 
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 

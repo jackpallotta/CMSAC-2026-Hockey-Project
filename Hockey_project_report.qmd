@@ -62,7 +62,7 @@ barplot4 = events_after_faceoff2 |>
 barplot4
 ```
 
-The following looks at a density map of the offensive zone in hockey and where the future shot_attempts took place.
+The following looks at a 2D kernel density estimation map of the offensive zone in hockey and where the future shot_attempts took place.
 ```{r}
 future_shot_data = events_model |>
   select(xCoord, yCoord, future_shot) |>

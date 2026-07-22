@@ -20,8 +20,6 @@ execute:
 editor: visual
 ---
 
-https://rentosaijo.github.io/nhlscraper/logo.png \<- nhlscraper logo if we want to put it in our report
-
 ## Introduction
 
 In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after any stoppage, such as period-end, icing, goal, and penalties. Faceoffs can also occur at varying leverage states in a game. High leverage in hockey is when certain states of a game, such as score and strength, allow for a team and players to have a higher probability of success throughout the game.
@@ -42,6 +40,8 @@ nhl.mod = readRDS("Shiny/nhl_mod.RDS")
 ```
 
 ### EDA
+
+#### High Leverage Performance
 
 #### Quantifying Faceoff Value
 
@@ -73,10 +73,13 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 methods for High leverage performance
 
 ### Quantifying Faceoff Value
-A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. The generalized additive model took hours to process so the model was transitioned to a big additive model to cut down on processing time.
+
+A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. The generalized additive model took hours to process so the model was transitioned to a big additive model to cut down on processing time. Thus, We modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows.
+$$\log\left(\frac{P(\text{future\_shot}_i = 1)}{1 - P(\text{future\_shot}_i = 1)}\right) = \beta_0 + \beta_1(\text{eventTypeDescKey}_i) + s(\text{xCoord}_i, \text{yCoord}_i) + s(\text{distance}_i) + s(\text{secondsElapsedInGame}_i) + \text{strengthState}_i \times \text{scoreState}_i + \beta_2(\text{isEmptyNetFor}_i) + \beta_3(\text{isEmptyNetAgainst}_i) + s(\text{angle}_i)$$
+
+The model uses thin plate regression splines with the basis dimensions (k) capped to avoid overfitting (k = 30 for coordinates, k = 20 for distance, and k = 15 for angle). The model also used fast Restricted Maximum Likelihood to cut down on processing time.
 
 The data was split into a 75% training and a 25% testing Holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer.
-
 
 ## Results
 
@@ -149,7 +152,8 @@ Give your conclusions and summarize what you have learned with regards to your q
 ### High Leverage Performance
 
 ### Quantifying Faceoff Value
-Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (< 0.2) or on the higher end (>0.60) most likely due to the use if o binary predictor.
+
+Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (\< 0.2) or on the higher end (\>0.60) most likely due to the use if o binary predictor.
 
 ## Appendix: A quick tutorial
 

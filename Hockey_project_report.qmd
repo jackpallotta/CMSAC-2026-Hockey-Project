@@ -73,6 +73,7 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 methods for High leverage performance
 
 ### Quantifying Faceoff Value
+A logistic regression was first tried due to the binary variable of future unblocked shot attempt.
 
 The data was split into a 75% training and a 25% testing Holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer.
 

@@ -241,8 +241,7 @@ ggplot(shot_calibration_check,
               linetype = "dashed") +
   geom_line(color = "blue") +
   geom_point(shape = 15, size = 3, color = "blue", alpha = 0.5) +
-  labs(x = "Mean Predicted Probability", y = "Observed Probability",
-       title = "Calibration Plot") +
+  labs(x = "Mean Predicted Probability", y = "Observed Probability") +
   coord_equal() +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5,  size = 15))
@@ -827,4 +826,62 @@ table(events_after_faceoff2$eventOwnerTeamId)
 round(prop.table(table(events_after_faceoff2$is_shot_atmpt,
                        events_after_faceoff2$eventOwnerTeamId,
                        events_after_faceoff2$faceoffDotCategory), margin = c(2,3)), 3)
+
+
+
+#### creating a new ROC plot from test data ----
+test.mod2 = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState:scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = test_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+summary(test.mod2)
+
+
+shot_results = test_data |>
+  select(future_shot, eventTypeDescKey, xCoord, yCoord,distance, scoreState, strengthState,
+         secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
+  drop_na() |>
+  mutate(shot_prob = predict(test.mod2, type = "response"),
+         pred_decile2 = ntile(shot_prob, 10))
+
+#checks each level of predictions withe the actual results
+shot_calibration_check =  shot_results |>
+  group_by(pred_decile2) |>
+  summarize(
+    predicted = mean(shot_prob),
+    actual = mean(future_shot),
+    n = n(),
+    .groups = "drop")
+shot_calibration_check #only slightly off
+
+roc_obj5 = roc(
+  response = shot_results$future_shot,
+  predictor = shot_results$shot_prob,
+  quiet = TRUE)
+
+auc(roc_obj5) #AUC is 0.946
+
+#confusion matrix
+prop.table(table("Predicted" = factor(nhl.mod_pred_class, levels = c("Win", "Loss")), 
+                 "Observed" = factor(shot_results$future_shot, levels = c("TRUE", "FALSE"))))
+
+#class balance
+prop.table(table(shot_results$future_shot))
+
+
+#creating an ROC curve
+#library(pROC)
+
+shot_roc = tibble(threshold = c(roc_obj2$thresholds),
+                  specificity = roc_obj2$specificities,
+                  sensitivity = roc_obj2$sensitivities)
+
+shot_roc |> 
+  ggplot(aes(x = 1 - specificity , y = sensitivity)) + #1-specificity (false pos. rate)
+  geom_path() +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed") + 
+  theme_bw() + 
+  labs( y = "True Positive Rate", x = "False Positive Rate") +
+  theme(plot.title = element_text(hjust = 0.5, size = 15))
 

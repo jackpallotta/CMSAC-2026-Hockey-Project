@@ -73,11 +73,10 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 methods for High leverage performance
 
 ### Quantifying Faceoff Value
-A logistic regression was first tried due to the binary variable of future unblocked shot attempt.
+A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. The generalized additive model took hours to process so the model was transitioned to a big additive model to cut down on processing time.
 
 The data was split into a 75% training and a 25% testing Holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer.
 
-methods for quantifying faceoff value
 
 ## Results
 
@@ -87,7 +86,7 @@ Describe your results. This can include tables and plots showing your results, a
 
 ### Quantifying Faceoff Value
 
-The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur. The following plot is a calibration plot of the model showing how the model accurately predicts on the low and high end of shot probabilities, but is missing predctions in the middle range.
+The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur. The following plot is a calibration plot of the model showing how the model accurately predicts on the low and high end of shot probabilities, but is missing predictions in the middle range.
 
 ```{r}
 shot_results = train_data |>
@@ -150,6 +149,7 @@ Give your conclusions and summarize what you have learned with regards to your q
 ### High Leverage Performance
 
 ### Quantifying Faceoff Value
+Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (< 0.2) or on the higher end (>0.60) most likely due to the use if o binary predictor.
 
 ## Appendix: A quick tutorial
 

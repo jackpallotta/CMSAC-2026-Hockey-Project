@@ -346,3 +346,7 @@ Give your conclusions and summarize what you have learned with regards to your q
 ### Quantifying Faceoff Value
 
 Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (\< 0.2) or on the higher end (\>0.60) most likely due to the use if o binary predictor.
+
+## Appendix
+### References
+### Contact Information

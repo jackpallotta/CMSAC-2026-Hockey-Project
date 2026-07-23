@@ -23,7 +23,22 @@ editor: visual
 
 ## Introduction
 
-In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after any stoppage, such as period-end, icing, goal, and penalties. Faceoffs can also occur at varying leverage states in a game. High leverage in hockey is when certain states of a game, such as score and strength, allow for a team and players to have a higher probability of success throughout the game.
+Every hockey game includes about 55 to 60 faceoff events. There is an opening faceoff that takes place at center ice to mark the beginning of each period and additional, dynamically occurring faceoffs that take place at any one of nine faceoff dot locations after each stoppage in play. The faceoff event is a primary responsibility of the center position in hockey, but any player is eligible to take a faceoff besides the goaltender. While a fan may reduce faceoff events to mere breaks or pauses in the speed and intensity of gameplay, well-respected National Hockey League players and coaches attest that the outcome of faceoff events carry meaningful implications on hockey games and offer competitive advantages to the team who is able to win it. In a morning skate interview with LA Kings Insider, two-time Stanley Cup Champion Jarret Stoll stated that winning the battle amongst elite centers begins with faceoffs, linking faceoff wins to increased puck possession and opportunities to generate scoring chances (). Since retiring from his playing career, Stoll has transitioned into a player development coach role with the Los Angeles Kings and continues to discuss the nuances of faceoff events in the public sphere ().
+
+When watching a hockey game, it is clear that certain game states are more determinant of winning the game than others. As a result, the relative importance of a faceoff win (or any event, for that matter) is not static; it varies based on the game state. For the purposes of this project, leverage can be defined as the power of a faceoff outcome to greatly impact the game outcome. In certain game states that are of higher leverage, winning or losing a given faceoff could greatly impact whether the faceoff team wins or loses the game. In lower leverage game states, winning or losing a given faceoff is less determinant of winning or losing the game. 
+
+The following two faceoff events found in the 2025-26 NHL season are a prime example of how leverage varies by game state:
+**insert gifs**
+Although there is benefit to winning both of the above faceoffs and both winning teams are able to generate a shot attempt from the possession sequence following their faceoff win, the overall importance of that win and shot attempt on the game outcome vary significantly. 
+
+In Clip 1, Flames forward Tyson Gross wins a neutral zone faceoff midway through the 3rd period while defending a four-goal lead. This faceoff has low leverage, because the game stakes when the faceoff is being taken is low. Regardless of the outcome of the faceoff, Calgary likely has this game in-hand. Alternatively, Clip 2 features a faceoff between J.G. Pageau and Anze Kopitar in the dying seconds of a one-goal game. The Islanders have a six-on-four advantage, with a powerplay and the goalie pulled for an extra attacker in hopes of pushing this game to overtime. This faceoff has higher leverage, because the stakes are high. 
+
+While leverage can identify game states where faceoffs matter most, it does not consider the outcome of the faceoff. If Pageau wins the faceoff, the Islanders establish possession with an opportunity to even up the game. On the other hand, if Kopitar wins, the Kings are in a significantly better position to defend their late game lead and come away with the win. Each faceoff serves as a cross-road for the flow of the game. Subsequent scoring opportunities a team can generate varies greatly based on whether or not they win a given faceoff and gain possession of the puck. 
+
+Faceoff win percentage, calculated as a player’s number of faceoff wins divided by their total number of faceoffs taken, is the primary metric used to measure player faceoff contributions in public hockey circles. However, this metric treats every faceoff as if they were of equal importance. As a result, the greater contributions of players who consistently win high leverage faceoffs that are most meaningful to game outcomes are not being captured. Faceoff win percentage also only captures whether a given faceoff is won or lost, not accounting for events or scoring opportunities to follow.
+
+This research aims to contextualize faceoff leverage through the use of leverage groups and quantify the value of a faceoff win through short-term measures of success and expected benefit. Expected goals (xG) within five seconds of a faceoff were selected as our measure of short-term success. A five-second post-faceoff window was selected for simplicity and due to the structure of the NHL play-by-play data.
+
 
 ## Data
 
@@ -56,6 +71,8 @@ The first component in estimating leverage is the win probability for the two te
 A plot of the relationship between time remaining and empirical win percentage, faceted by the goal differential, shows that time effects are nonlinear with empirical win percentage. Once a multi-goal lead is built, empirical win probability tails off as the game nears its conclusion. For score differentials greater than three goals, observations were grouped into a ±3 differential bucket for interpretability.
 
 Strength state, or the on-ice manpower situation between opposing teams, is another factor to consider when quantifying leverage. A plot of empirical win percentage by strength state indicates that win probability changes given the man differential. The data contained a limited number of ±3 manpower situations, so ±2 with an empty net for or against were grouped to create the "EN ±2" strength state.
+
+Considering only a five-second window within faceoffs, distance from the attacking net plays a factor in the expected value of winning the draw. Winning an offensive zone faceoff produces a much higher mean xG within five seconds of a faceoff.
 
 First Plot
 

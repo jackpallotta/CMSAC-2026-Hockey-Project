@@ -58,6 +58,7 @@ A plot of the relationship between time remaining and empirical win percentage, 
 Strength state, or the on-ice manpower situation between opposing teams, is another factor to consider when quantifying leverage. A plot of empirical win percentage by strength state indicates that win probability changes given the man differential. The data contained a limited number of ±3 manpower situations, so ±2 with an empty net for or against were grouped to create the "EN ±2" strength state.
 
 First Plot
+
 ```{r}
 leverageVariables |>
   distinct(eventId, .keep_all = TRUE) |>
@@ -83,7 +84,9 @@ leverageVariables |>
   theme(plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
         axis.title = element_text(size = 12))
 ```
+
 Second Plot
+
 ```{r}
 leverageVariables |>
   distinct(eventId, .keep_all = TRUE) |>
@@ -103,7 +106,9 @@ leverageVariables |>
   theme(plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
         axis.title = element_text(size = 12))
 ```
+
 Third Plot
+
 ```{r}
 leverageVariables |>
   distinct(eventId, .keep_all = TRUE) |>
@@ -123,7 +128,6 @@ leverageVariables |>
   theme(plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
         axis.title = element_text(size = 12))
 ```
-
 
 #### Quantifying Faceoff Value
 
@@ -165,9 +169,9 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 
 ### High Leverage Performance
 
-The leverage model combines goal value and goal likelihood. Goal value is measured through win probability, or how valuable a goal is given the current game state. Goal likelihood is measured through the predicted xG generated within five seconds of a faceoff, or how much opportunity from each team’s perspective exists in a game state before the faceoff occurs. Therefore, the leverage model is not conditional on a faceoff win or loss. Instead, the variable represents the value of having the faceoff occur, regardless of the outcome. 
+The leverage model combines goal value and goal likelihood. Goal value is measured through win probability, or how valuable a goal is given the current game state. Goal likelihood is measured through the predicted xG generated within five seconds of a faceoff, or how much opportunity from each team’s perspective exists in a game state before the faceoff occurs. Therefore, the leverage model is not conditional on a faceoff win or loss. Instead, the variable represents the value of having the faceoff occur, regardless of the outcome.
 
-#### Modeling Goal Value (Win Probability) 
+#### Modeling Goal Value (Win Probability)
 
 The first component of the leverage model, goal value, estimates win probability from each team's perspective given the current game state right before the faceoff. Predictors included goal differential, seconds remaining, zone, situation code, and a binary overtime status variable. (Link EDA plot) Exploratory analysis revealed the time remaining depends on the goal differential, motivating an interaction between the two variables. For example, the figure shows that the win probability for a team leading by one goal remains relatively stable, then spikes in the later stages of the game. Interactions between other features such as situation code and zone were considered but ultimately were not significant.
 
@@ -179,7 +183,7 @@ Model performance was evaluated using AUC, Brier score, and calibration. As expe
 
 Ultimately, the GAM was selected because, rather than specifying the spline degrees of freedom, the model estimates the shape of the nonlinear relationship from the data through penalized smoothing.
 
-Three hypothetical game states from the win probability model are evaluated from (1) the current game state, (2) the current game state if the team scores a goal, and (3) the current game state if the team surrenders a goal. Calculating the change in win probability estimates the value of scoring a goal. 
+Three hypothetical game states from the win probability model are evaluated from (1) the current game state, (2) the current game state if the team scores a goal, and (3) the current game state if the team surrenders a goal. Calculating the change in win probability estimates the value of scoring a goal.
 
 #### Modeling Goal Likelihood (Predicted xG)
 

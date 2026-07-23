@@ -1,5 +1,7 @@
 rm(list=ls())
 library(tidyverse)
+library(gt)
+library(scales)
 library(ggridges)
 library(classInt)
 library(BAMMtools)
@@ -9,6 +11,7 @@ library(emmeans)
 
 faceoffData <- readRDS("faceoffData.rds")
 faceoffValueData <- readRDS("faceoffValueData.rds")
+players <- readRDS("players.rds")
 
 # jenks natural breaks 1D clustering 
 set.seed(91)
@@ -179,3 +182,92 @@ plot_df |>
     strip.background = element_rect(fill = "#123456"),
     strip.text = element_text(face = "bold"))
 
+colnames(faceoffValueData)
+
+playerWinValueRankings <- faceoffValueData |>
+  filter(faceoffWon == 1) |>
+  group_by(faceoffPlayerId, player) |>
+  summarize(faceoffWins = n(),
+    avgOffensiveWinValue = mean(offensiveWinValue, na.rm = TRUE),
+    avgDefensiveWinValue = mean(defensiveWinValue, na.rm = TRUE),
+    totalOffensiveWinValue = sum(offensiveWinValue, na.rm = TRUE),
+    totalDefensiveWinValue = sum(defensiveWinValue, na.rm = TRUE),
+    avgNetWinValue = mean(netxGWinValue, na.rm = TRUE),
+    totalNetWinValue = sum(netxGWinValue, na.rm = TRUE),
+    .groups = "drop") |>
+  filter(faceoffWins >= 100)
+
+offensiveTable <- playerWinValueRankings |>
+  slice_max(totalOffensiveWinValue, n = 10, with_ties = FALSE) |>
+  arrange(desc(totalOffensiveWinValue)) |>
+  mutate(Rank = row_number()) |>
+  select(Rank, Player = player, `Faceoff Wins` = faceoffWins,
+         `Offensive Win Value` = totalOffensiveWinValue) |>
+  gt() |>
+  tab_header(title = md("**Top 10 Players by Offensive Faceoff Win Value**"),
+    subtitle = "Cumulative xG generated from faceoff wins") |>
+  fmt_number(columns = `Offensive Win Value`, decimals = 2) |>
+  data_color(
+    columns = `Offensive Win Value`,
+    palette = c("#deebf7", "#9ecae1", "#4292c6", "#08519c"),
+    domain = range(
+      playerWinValueRankings$totalOffensiveWinValue,
+      na.rm = TRUE)) |>
+  cols_align(align = "center", columns = c(Rank, `Faceoff Wins`, `Offensive Win Value`)) |>
+  cols_align(align = "left", columns = Player) |>
+  cols_width(Rank ~ px(60), Player ~ px(160), `Faceoff Wins` ~ px(110), `Offensive Win Value` ~ px(160)) |>
+  tab_style(style = cell_text(weight = "bold"), locations = cells_body(columns = Player)) |>
+  tab_options(heading.align = "center", table.font.size = px(14),
+    column_labels.font.weight = "bold", data_row.padding = px(6))
+
+offensiveTable
+
+defensiveTable <- playerWinValueRankings |>
+  slice_max(totalDefensiveWinValue, n = 10, with_ties = FALSE) |>
+  arrange(desc(totalDefensiveWinValue)) |>
+  mutate(Rank = row_number()) |>
+  select(Rank, Player = player, `Faceoff Wins` = faceoffWins,
+         `Defensive Win Value` = totalDefensiveWinValue) |>
+  gt() |>
+  tab_header(title = md("**Top 10 Players by Defensive Faceoff Win Value**"),
+             subtitle = "Cumulative xG prevented from faceoff wins") |>
+  fmt_number(columns = `Defensive Win Value`, decimals = 2) |>
+  data_color(
+    columns = `Defensive Win Value`,
+    palette = c("#deebf7", "#9ecae1", "#4292c6", "#08519c"),
+    domain = range(
+      playerWinValueRankings$totalDefensiveWinValue,
+      na.rm = TRUE)) |>
+  cols_align(align = "center", columns = c(Rank, `Faceoff Wins`, `Defensive Win Value`)) |>
+  cols_align(align = "left", columns = Player) |>
+  cols_width(Rank ~ px(60), Player ~ px(160), `Faceoff Wins` ~ px(110), `Defensive Win Value` ~ px(150)) |>
+  tab_style(style = cell_text(weight = "bold"), locations = cells_body(columns = Player)) |>
+  tab_options(heading.align = "center", table.font.size = px(14),
+              column_labels.font.weight = "bold", data_row.padding = px(6))
+
+defensiveTable
+
+netWinValueTable <- playerWinValueRankings |>
+  slice_max(totalNetWinValue, n = 10, with_ties = FALSE) |>
+  arrange(desc(totalNetWinValue)) |>
+  mutate(Rank = row_number()) |>
+  select(Rank, Player = player, `Faceoff Wins` = faceoffWins,
+         `Net Win Value` = totalNetWinValue) |>
+  gt() |>
+  tab_header(title = md("**Top 10 Players by Net Faceoff Win Value**"),
+             subtitle = "Cumulative net xG from faceoff wins") |>
+  fmt_number(columns = `Net Win Value`, decimals = 2) |>
+  data_color(
+    columns = `Net Win Value`,
+    palette = c("#deebf7", "#9ecae1", "#4292c6", "#08519c"),
+    domain = range(
+      playerWinValueRankings$totalNetWinValue,
+      na.rm = TRUE)) |>
+  cols_align(align = "center", columns = c(Rank, `Faceoff Wins`, `Net Win Value`)) |>
+  cols_align(align = "left", columns = Player) |>
+  cols_width(Rank ~ px(60), Player ~ px(160), `Faceoff Wins` ~ px(110), `Net Win Value` ~ px(150)) |>
+  tab_style(style = cell_text(weight = "bold"), locations = cells_body(columns = Player)) |>
+  tab_options(heading.align = "center", table.font.size = px(14),
+              column_labels.font.weight = "bold", data_row.padding = px(6))
+
+netWinValueTable

@@ -26,7 +26,11 @@ In hockey, faceoffs are used to (re)start playing time. Faceoffs can occur after
 
 ## Data
 
-The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. The data that we specifically looked at from the nhlscraper package was NHL game play by play data for the 2021-2022 to the 2025-2026 seasons. We ultimately worked with two unique data sets compiled from one large 5 season play by play data set. One of our data sets looks at the events that occur within 5 seconds of a faceoff. The other data set looks at the faceoff event itself and mirrors the faceoff for hte home and away team.
+The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. We specifically looked at NHL play-by-play data for the 2021-2022 to 2025-2026 seasons due to improvements in game scoring and shot tracking. Since the NHL play-by-play consists of discrete event data rather than continuous puck and player tracking, the exact duration of influence for a given faceoff can’t be accurately observed. A five-second window provides a practical approximation of the post-faceoff sequence while limiting unrelated downstream events.
+
+Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.
+
+Post-faceoff windows without a continuous five-second window of play to generate a scoring opportunity remain part of the dataset. These “censored” values arise when a penalty is committed or the puck is flipped out of play. An available scoring opportunity variable is calculated in seconds as a feature during the modeling phase to evaluate scoring opportunity over the subsequent five seconds of a faceoff.
 
 ```{r}
 require(ggplot2)
@@ -41,7 +45,15 @@ nhl.mod = readRDS("Shiny/nhl_mod.RDS")
 
 ### EDA
 
+Before creating any models, exploring the play-by-play data helped reveal which features to consider when evaluating the leverage and expected value of a faceoff win.
+
 #### High Leverage Performance
+
+The first component in estimating leverage is the win probability for the two teams facing off before the puck drop. The value of a goal is not constant, as some goals can alter the final game outcome, while others have minimal effect in a blowout scenario.
+
+A plot of the relationship between time remaining and empirical win percentage, faceted by the goal differential, shows that time effects are nonlinear with empirical win percentage. Once a multi-goal lead is built, empirical win probability tails off as the game nears its conclusion. For score differentials greater than three goals, observations were grouped into a ±3 differential bucket for interpretability.
+
+Strength state, or the on-ice manpower situation between opposing teams, is another factor to consider when quantifying leverage. A plot of empirical win percentage by strength state indicates that win probability changes given the man differential. The data contained a limited number of ±3 manpower situations, so ±2 with an empty net for or against were grouped to create the "EN ±2" strength state.
 
 #### Quantifying Faceoff Value
 
@@ -83,7 +95,63 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 
 ### High Leverage Performance
 
-methods for High leverage performance
+The leverage model combines goal value and goal likelihood. Goal value is measured through win probability, or how valuable a goal is given the current game state. Goal likelihood is measured through the predicted xG generated within five seconds of a faceoff, or how much opportunity from each team’s perspective exists in a game state before the faceoff occurs. Therefore, the leverage model is not conditional on a faceoff win or loss. Instead, the variable represents the value of having the faceoff occur, regardless of the outcome. 
+
+#### Modeling Goal Value (Win Probability) 
+
+The first component of the leverage model, goal value, estimates win probability from each team's perspective given the current game state right before the faceoff. Predictors included goal differential, seconds remaining, zone, situation code, and a binary overtime status variable. (Link EDA plot) Exploratory analysis revealed the time remaining depends on the goal differential, motivating an interaction between the two variables. For example, the figure shows that the win probability for a team leading by one goal remains relatively stable, then spikes in the later stages of the game. Interactions between other features such as situation code and zone were considered but ultimately were not significant.
+
+From there, the following three models were evaluated using five-fold cross-validation with folds assigned by game to maintain the mirrored faceoff data structure.
+
+Logistic regression with linear time effects Logistic regression with natural spline time effects A generalized additive model (GAM) with score-specific smooths for time remaining
+
+Model performance was evaluated using AUC, Brier score, and calibration. As expected, the nonlinear approaches outperformed the logistic regression (AUC = 0.817 vs. 0.812; Brier = 0.1717 vs. 0.1739). The spline model and GAM both adequately captured the relationship between goal differential and seconds remaining, producing virtually identical predictive performance and calibration.
+
+Ultimately, the GAM was selected because, rather than specifying the spline degrees of freedom, the model estimates the shape of the nonlinear relationship from the data through penalized smoothing.
+
+Three hypothetical game states from the win probability model are evaluated from (1) the current game state, (2) the current game state if the team scores a goal, and (3) the current game state if the team surrenders a goal. Calculating the change in win probability estimates the value of scoring a goal. 
+
+#### Modeling Goal Likelihood (Predicted xG)
+
+Goal likelihood estimates the immediate scoring opportunity based on the current game state right before the faceoff. The goal of the leverage model measures the importance of the faceoff itself, so only pre-faceoff features were incorporated into the goal likelihood model, with one exception to account for the subsequent window of play. Therefore, the goal likelihood model is unconditional on a faceoff win or loss.
+
+Just 621 goals were scored within five seconds of 370,890 faceoff events (0.0017%), making goals a highly variable response variable for the model. Expected goals (xG) served as a much more stable response in estimating immediate scoring opportunities following a faceoff. The distribution of xG within five seconds of a faceoff is heavily skewed, continuous, positive, and has a large spike of exact zeros (91.8% of faceoffs produced 0 xG). A Gaussian GAM was evaluated because xG is a continuous response variable. However, the Gaussian GAM predicted negative xG values for 16.6% of the faceoffs. Therefore, a Tweedie regression was a better distributional assumption for xG because of nonnegativity and a large mass at zero.
+
+With the goal likelihood model focused on pre-faceoff variables, the same set of variables was selected as the goal value model. Once again, interactions between the variables were not significant. One additional feature added to the goal likelihood model was the available continuous play window for immediate scoring opportunity. Because the continuous window of play for most faceoffs was close to five seconds, the log of the continuous time window was used to compress larger values and increase resolution among shorter windows, resulting in a smoother relationship with scoring opportunity.
+
+From there, the following three models were evaluated using five-fold cross-validation with folds assigned by game to maintain the mirrored faceoff data structure.
+
+- Tweedie regression with linear time and available window effects
+
+- Tweedie generalized additive model (GAM) with score-specific smooths for time remaining and available window
+
+- Gaussian generalized additive model (GAM) with score-specific smooths for time remaining and available window
+
+**Insert Table**
+
+While the Gaussian and Tweedie GAMs produced nearly identical RMSE values, the Gaussian model generated impossible negative xG predictions. The Tweedie GAM achieved the lowest prediction error while avoiding negative xG values. The Tweedie GLM performed slightly worse, supporting the use of nonlinear smooth terms.
+
+From there, offensive and defensive leverage components are calculated as:
+
+- $\text{L_Offense} = \Delta\text{WP_GoalFor} \times \text{E(xGFor5)}$
+
+- $\text{L_Defense} = \Delta\text{WP_GoalAgainst} \times \text{E(xGAgainst5)}$
+
+- $\text{L} = \text{L_Offense} + \text{L_Defense}$
+
+These two components are added to produce a leverage score, which is normalized to a 0-1 scale for interpretability.
+
+Lastly, the normalized leverage scores were bucketed into three leverage groups: high, medium, and low. Jenks natural breaks clustering, a one-dimensional method, was selected to minimize within-group variance and maximize between-group variance. Three leverage groups were picked to balance interpretability with meaningful separation between game states.
+
+#### Modeling Faceoff Win Value
+
+The faceoff win value model incorporates the outcome of the faceoff to estimate the expected benefit of winning the draw. In other words, the faceoff win value model is contingent on a faceoff win or loss. Faceoff win value is calculated as the predicted change in net xG between winning and losing the same faceoff.
+
+(Link back to EDA plot) Exploratory analysis showed that winning a faceoff in the offensive zone will produce a much higher xG value on average within five seconds of a faceoff compared to the neutral zone and defensive zone. Therefore, an interaction between winning the faceoff and zone code was added. Intuitively, this makes sense because there’s less distance from the attacking goal with a faceoff stationed in the offensive zone, especially if the winning team starts a clean possession.
+
+Like the goal likelihood model, a Tweedie GAM evaluated xG For and xG Against within a five-second window to estimate the value of winning that faceoff. Each model included faceoff outcome (binary win/loss variable) interacted with zone code, along with goal differential, score-specific smooths (interaction between goal differential and seconds remaining), overtime variable, and the log-transformed available window.
+
+Holding the current game state variables constant, two hypothetical scenarios were created by setting the outcome to either a win or a loss. The offensive and defensive values were measured as the difference in xG between these scenarios. An overall faceoff win value is computed by weighing both the offensive and defensive sides of the puck given the impact of a goal for or against in the current game state. Offensive and defensive values are combined to create a net xG faceoff win value.
 
 ### Quantifying Faceoff Value
 

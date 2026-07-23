@@ -515,9 +515,7 @@ table(Actual = test_data$future_shot, Predicted = test_data$pred_class)|>
 
 Separating leverage from faceoff win value distinguishes when faceoffs matter from how much value winning a given faceoff adds to a team in comparison to losing. Faceoff win percentage (FOW%) by leverage group identifies players who perform better in high-leverage situations, providing context that extends beyond their traditional FOW%. Faceoff win value quantifies the impact of winning a faceoff in a given game state by estimating its contribution to future net expected goals. Together, these metrics form context around overall FOW% by accounting for the importance of the scenario and the expected value of the outcome. A player’s FOW% by leverage group and the xG value gained from a win should be interpreted as complementary measures to a player’s overall FOW%, rather than a complete assessment of faceoff ability or impact.
 
-In addition, the Shiny app allows users to create a sequence of events directly after a faceoff and calculate the probability of a future unblocked shot attempt following the event sequence.
-
-Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (\< 0.2) or on the higher end (\>0.60) most likely due to the use if o binary predictor.
+In addition, the Shiny app allows users to create a sequence of events directly after a faceoff and calculate the probability of a future unblocked shot attempt following the event sequence. Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (\< 0.2) or on the higher end (\>0.60).
 
 ### Limitations
 
@@ -526,6 +524,8 @@ A key limitation of our research is the arbitrary five-second post-faceoff windo
 Another shortcoming of our research is that faceoff deployment is heavily impacted by who the head coach trusts to be on the ice in big moments. Players do not receive equal opportunity across leverage groups, meaning there may be some high-leverage performers who did not get the chance to display their ability in a large enough sample. Moreover, these models do not account for the historical skill of each player at the faceoff dot, or the other players on the ice who can help win the faceoff, whether by tying up opponents or pushing a puck back to a teammate for possession.
 
 There are also intangible nuances with faceoffs in the NHL that would be difficult for a model to quantify. The puck is dropped by a referee, which means human error impacts the speed and effect of the puck striking the ice surface. Furthermore, retired NHL player Paul Stastny, who won a respectable 53.8% of his faceoffs during his career, attests that some players lose faceoffs on purpose to jump the opponent for possession including but not limited to Ryan Getzlaf and Corey Perry who frequently did this back in his playing days. Lastly, there is a tactic where players will flip their stick around to pull the puck back if a player is taking a faceoff on his weak side, or where stick and body handedness do not naturally match the side of the ice the faceoff is on. The New York Rangers deployed this strategy during the 2023-24 season, in which they won the Presidents' Trophy as the league’s best regular-season team, while seeing a jump in team FOW% relative to previous seasons.
+
+Some limitations withgarding the the model used to create the Shiny was incorporating the teams that are involved in the game (faceoff, and following events) as well as incorporating who won the faceoff. Thus the model and, subsequently, the Shiny app are independent of who wins the the faceoff.
 
 ### Future Work
 

@@ -201,13 +201,18 @@ From there, the following three models were evaluated using five-fold cross-vali
 
 - Gaussian generalized additive model (GAM) with score-specific smooths for time remaining and available window
 
-**Insert Table**
+| Model       | RMSE    | MAE     | 
+|-------------|---------|---------|
+| Tweedie GAM | 0.0173  | 0.00386 |
+| Gaussian GAM| 0.0173  | 0.00390 |
+| Tweedie GLM | 0.0174  | 0.00402 |
+: Table comparing goal likelihood models
 
 While the Gaussian and Tweedie GAMs produced nearly identical RMSE values, the Gaussian model generated impossible negative xG predictions. The Tweedie GAM achieved the lowest prediction error while avoiding negative xG values. The Tweedie GLM performed slightly worse, supporting the use of nonlinear smooth terms.
 
 From there, offensive and defensive leverage components are calculated as:
 
-$\text{L\_Offense} = \Delta\text{WP\_GoalFor} \times \text{E(xGFor5)}$
+- $\text{L\_Offense} = \Delta\text{WP\_GoalFor} \times \text{E(xGFor5)}$
 
 - $\text{L\_Defense} = \Delta\text{WP\_GoalAgainst} \times \text{E(xGAgainst5)}$
 

@@ -46,6 +46,7 @@ This research aims to contextualize faceoff leverage through the use of leverage
 require(ggplot2)
 require(tidyverse)
 require(pROC)
+require(gt)
 theme_set(theme_bw())
 events_after_faceoff2 = readRDS("Shiny/events_after_faceoff2.rds")
 events_model = readRDS("Shiny/events_model.rds")
@@ -60,10 +61,16 @@ The data used throughout the project is pulled from the publicly available [nhls
 Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.Allowing the events occurring after the facoff to have their own unique rows allows for the Shiny app to enable multiple event sequences instead of just looking at a faceoff.
 
 ```{r}
+#first data set 
+```
+
+
+```{r}
 events_model |>
   select(gameId, periodNumber, faceoff_time, secondsElapsedInGame, eventTypeDescKey,
          xCoord, yCoord, strengthState, scoreState, future_shot) |>
-  head()
+  head() |>
+  gt()
 
 ```
 

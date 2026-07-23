@@ -8,6 +8,7 @@ library(lmerTest)
 library(emmeans)
 
 faceoffData <- readRDS("faceoffData.rds")
+faceoffValueData <- readRDS("faceoffValueData.rds")
 
 # jenks natural breaks 1D clustering 
 set.seed(91)
@@ -23,6 +24,13 @@ faceoffData <- faceoffData |>
   mutate(leverageGroup = cut(leverage, breaks = leverageBreaks$brks,
                              include.lowest = TRUE,
                              labels = c("Low", "Medium", "High")))
+
+eventLeverage <- faceoffData |>
+  distinct(eventId, leverage, leverageGroup)
+
+faceoffValueData <- faceoffValueData |>
+  select(-any_of(c("leverage", "leverageGroup"))) |>
+  left_join(eventLeverage, by = "eventId", relationship = "many-to-one")
 
 faceoffPlots <- faceoffData |>
   select(gameId, eventId, faceoffPlayerId, player, leverage, leverageGroup, faceoffWon, zoneCode)
@@ -170,3 +178,4 @@ plot_df |>
     axis.text = element_text(size = 10),
     strip.background = element_rect(fill = "#123456"),
     strip.text = element_text(face = "bold"))
+

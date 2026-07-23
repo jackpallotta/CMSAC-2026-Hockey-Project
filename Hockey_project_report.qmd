@@ -29,6 +29,7 @@ When watching a hockey game, it is clear that certain game states are more deter
 
 The following two faceoff events found in the 2025-26 NHL season are a prime example of how leverage varies by game state:
 **insert gifs**
+
 Although there is benefit to winning both of the above faceoffs and both winning teams are able to generate a shot attempt from the possession sequence following their faceoff win, the overall importance of that win and shot attempt on the game outcome vary significantly. 
 
 In Clip 1, Flames forward Tyson Gross wins a neutral zone faceoff midway through the 3rd period while defending a four-goal lead. This faceoff has low leverage, because the game stakes when the faceoff is being taken is low. Regardless of the outcome of the faceoff, Calgary likely has this game in-hand. Alternatively, Clip 2 features a faceoff between J.G. Pageau and Anze Kopitar in the dying seconds of a one-goal game. The Islanders have a six-on-four advantage, with a powerplay and the goalie pulled for an extra attacker in hopes of pushing this game to overtime. This faceoff has higher leverage, because the stakes are high. 
@@ -41,13 +42,6 @@ This research aims to contextualize faceoff leverage through the use of leverage
 
 
 ## Data
-
-The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. We specifically looked at NHL play-by-play data for the 2021-2022 to 2025-2026 seasons due to improvements in game scoring and shot tracking. Since the NHL play-by-play consists of discrete event data rather than continuous puck and player tracking, the exact duration of influence for a given faceoff can’t be accurately observed. A five-second window provides a practical approximation of the post-faceoff sequence while limiting unrelated downstream events.
-
-Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.
-
-Post-faceoff windows without a continuous five-second window of play to generate a scoring opportunity remain part of the dataset. These “censored” values arise when a penalty is committed or the puck is flipped out of play. An available scoring opportunity variable is calculated in seconds as a feature during the modeling phase to evaluate scoring opportunity over the subsequent five seconds of a faceoff.
-
 ```{r}
 require(ggplot2)
 require(tidyverse)
@@ -59,6 +53,23 @@ train_data = readRDS("Shiny/train_data.rds")
 nhl.mod = readRDS("Shiny/nhl_mod.RDS")
 leverageVariables = readRDS("leverageVariables.rds")
 ```
+
+
+The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. We specifically looked at NHL play-by-play data for the 2021-2022 to 2025-2026 seasons due to improvements in game scoring and shot tracking. Since the NHL play-by-play consists of discrete event data rather than continuous puck and player tracking, the exact duration of influence for a given faceoff can’t be accurately observed. A five-second window provides a practical approximation of the post-faceoff sequence while limiting unrelated downstream events.
+
+Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.Allowing the events occurring after the facoff to have their own unique rows allows for the Shiny app to enable multiple event sequences instead of just looking at a faceoff.
+
+```{r}
+events_model |>
+  select(gameId, periodNumber, faceoff_time, secondsElapsedInGame, eventTypeDescKey,
+         xCoord, yCoord, strengthState, scoreState, future_shot) |>
+  head()
+
+```
+
+
+Post-faceoff windows without a continuous five-second window of play to generate a scoring opportunity remain part of the dataset. These “censored” values arise when a penalty is committed or the puck is flipped out of play. An available scoring opportunity variable is calculated in seconds as a feature during the modeling phase to evaluate scoring opportunity over the subsequent five seconds of a faceoff.
+
 
 ### EDA
 

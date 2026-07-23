@@ -1,7 +1,8 @@
 # CMSAC-2026-Hockey-Project
-Raw FOW% treats every faceoff equally, but does not adequately capture players that consistently win faceoffs that matter most. From watching game footage, we know specific game states can lead to future scoring opportunity directly following a faceoff. We call those faceoffs "high leverage," where winning or losing the faceoff could greatly impact the game’s outcome. Our research focuses on two main questions:
+Raw FOW% treats every faceoff equally, but does not adequately capture players that consistently win faceoffs that matter most. Our research framework uses two complementary models: one identifies when faceoffs matter most (leverage), and the other estimates how much winning a given faceoff is worth (faceoff win value). Leverage combines goal value (Logistic GAM) and goal likelihood (Tweedie GAM), while faceoff win value is calculated as the predicted change in net xG between winning and losing the same faceoff. We also created a Shiny app that allows users to create a sequence of events directly after a faceoff and calculate the probability of a future unblocked shot attempt following the event sequence.
+Our research focuses on two main questions:
 1. Are certain players better in high leverage situations? 
-2. Can we quantify faceoff value?
+2. Can we quantify faceoff win value?
 # Leverage Score Steps
 1. Run the 'model EDA plots.R' script to view exploratory data analyiss (EDA).
 2. Run the ‘pbp.R’ script to scrape NHL play-by-play into the console and clean the data.

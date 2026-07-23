@@ -98,3 +98,4 @@ faceoffData <- faceoffsCleaned |>
             by = c("eventId", "faceoffWon"), relationship = "many-to-one")
 
 saveRDS(faceoffData, "faceoffData.rds")
+saveRDS(leverageVariables, "leverageVariables.rds")

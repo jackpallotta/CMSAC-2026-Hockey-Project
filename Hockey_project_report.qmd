@@ -87,11 +87,11 @@ methods for High leverage performance
 
 ### Quantifying Faceoff Value
 
-A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. The generalized additive model took hours to process so the model was transitioned to a big additive model to cut down on processing time. Thus, We modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows. $$\log\left(\frac{P(\text{future\_shot}_i = 1)}{1 - P(\text{future\_shot}_i = 1)}\right) = \beta_0 + \beta_1(\text{eventTypeDescKey}_i) + s(\text{xCoord}_i, \text{yCoord}_i) + s(\text{distance}_i) \\+ s(\text{secondsElapsedInGame}_i) + \beta_2(\text{strengthState}_i \times \text{scoreState}_i) \\+ \beta_3(\text{isEmptyNetFor}_i) + \beta_4(\text{isEmptyNetAgainst}_i) + s(\text{angle}_i) + \varepsilon $$
+A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. Due to the large sample size, the model was estimated using the `bam()` function from the **mgcv** package, which fits a GAM more efficiently. Thus, we modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows. $$\log\left(\frac{P(\text{future\_shot}_i = 1)}{1 - P(\text{future\_shot}_i = 1)}\right) = \beta_0 + \beta_1(\text{eventTypeDescKey}_i) + s(\text{xCoord}_i, \text{yCoord}_i) + s(\text{distance}_i) \\+ s(\text{secondsElapsedInGame}_i) + \beta_2(\text{strengthState}_i \times \text{scoreState}_i) \\+ \beta_3(\text{isEmptyNetFor}_i) + \beta_4(\text{isEmptyNetAgainst}_i) + s(\text{angle}_i) + \varepsilon $$
 
-The model uses thin plate regression splines with the basis dimensions (k) capped to avoid overfitting (k = 30 for coordinates, k = 20 for distance, and k = 15 for angle). The model also used fast Restricted Maximum Likelihood to cut down on processing time.
+The nonlinear effects of event location, distance and angle from the net, and seconds elapsed were modeled using thin plate regression splines with the basis dimensions (k) capped to avoid overfitting (k = 30 for coordinates, k = 20 for distance, and k = 15 for angle). The model also used fast Restricted Maximum Likelihood to cut down on processing time.
 
-The data was split into a 75% training and a 25% testing holdout method to check for accuracy and to help ensure fast processing speed with a relatively large data set unlike k-fold cross-validation which would take longer. From this training and testing data the model was fit with the training data to help ensure an unbiased evaluation of predictive performance. The training and testing sets were then evaluated to check discrimination (ROC) and calibration. We checked calibration since we are trying to predict a future shot attempt following a sequence of events we need the calibration of the model to be precise.
+The data was split into a 75% training and a separate 25% testing. A single hold-out split was used instead of a k-fold cross-validation because of the long computational time associated with fitting large additive models. The model performance was then evaluated to check discrimination (ROC/AUC) and calibration. We checked calibration since we are trying to predict a future shot attempt following a sequence of events we need the calibration of the model to be precise.
 
 ## Results
 
@@ -133,7 +133,7 @@ ggplot(shot_calibration_check,
   theme(plot.title = element_text(hjust = 0.5,  size = 15))
 ```
 
-The following plot is a ROC plot showing how the model is also quite accurate.
+The following plot is a ROC plot showing how the model is also quite accurate. The model had an AUC of 0.946, indicating good discrimination between predicting when a future unblocked shot attempt would occur and when it would not occur.
 
 ```{r}
 roc_obj2 = roc(

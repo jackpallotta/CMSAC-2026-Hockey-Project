@@ -265,6 +265,8 @@ Holding the current game state variables constant, two hypothetical scenarios we
 
 ### Quantifying Faceoff Value
 
+#### Modeling Future Shot Probability
+
 A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. Due to the large sample size, the model was estimated using the `bam()` function from the **mgcv** package, which fits a GAM more efficiently. Thus, we modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows. $$\begin{aligned}
 \log\left(\frac{P(\text{future\_shot}_i = 1)}{1 - P(\text{future\_shot}_i = 1)}\right) = \beta_0 &+ \beta_1(\text{eventTypeDescKey}_i) + s(\text{xCoord}_i, \text{yCoord}_i) + s(\text{distance}_i) \\&+ s(\text{secondsElapsedInGame}_i) + \beta_2(\text{strengthState}_i \times \text{scoreState}_i) \vphantom{\frac{1}{2}} \\&+ \beta_3(\text{isEmptyNetFor}_i) + \beta_4(\text{isEmptyNetAgainst}_i) + s(\text{angle}_i) + \varepsilon_i \vphantom{\frac{1}{2}}
 \end{aligned}$$

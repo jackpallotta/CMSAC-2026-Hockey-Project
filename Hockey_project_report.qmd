@@ -25,23 +25,22 @@ editor: visual
 
 Every hockey game includes about 55 to 60 faceoff events. There is an opening faceoff that takes place at center ice to mark the beginning of each period and additional, dynamically occurring faceoffs that take place at any one of nine faceoff dot locations after each stoppage in play. The faceoff event is a primary responsibility of the center position in hockey, but any player is eligible to take a faceoff besides the goaltender. While a fan may reduce faceoff events to mere breaks or pauses in the speed and intensity of gameplay, well-respected National Hockey League players and coaches attest that the outcome of faceoff events carry meaningful implications on hockey games and offer competitive advantages to the team who is able to win it. In a morning skate interview with LA Kings Insider, two-time Stanley Cup Champion Jarret Stoll stated that winning the battle amongst elite centers begins with faceoffs, linking faceoff wins to increased puck possession and opportunities to generate scoring chances (). Since retiring from his playing career, Stoll has transitioned into a player development coach role with the Los Angeles Kings and continues to discuss the nuances of faceoff events in the public sphere ().
 
-When watching a hockey game, it is clear that certain game states are more determinant of winning the game than others. As a result, the relative importance of a faceoff win (or any event, for that matter) is not static; it varies based on the game state. For the purposes of this project, leverage can be defined as the power of a faceoff outcome to greatly impact the game outcome. In certain game states that are of higher leverage, winning or losing a given faceoff could greatly impact whether the faceoff team wins or loses the game. In lower leverage game states, winning or losing a given faceoff is less determinant of winning or losing the game. 
+When watching a hockey game, it is clear that certain game states are more determinant of winning the game than others. As a result, the relative importance of a faceoff win (or any event, for that matter) is not static; it varies based on the game state. For the purposes of this project, leverage can be defined as the power of a faceoff outcome to greatly impact the game outcome. In certain game states that are of higher leverage, winning or losing a given faceoff could greatly impact whether the faceoff team wins or loses the game. In lower leverage game states, winning or losing a given faceoff is less determinant of winning or losing the game.
 
-The following two faceoff events found in the 2025-26 NHL season are a prime example of how leverage varies by game state:
-**insert gifs**
+The following two faceoff events found in the 2025-26 NHL season are a prime example of how leverage varies by game state: **insert gifs**
 
-Although there is benefit to winning both of the above faceoffs and both winning teams are able to generate a shot attempt from the possession sequence following their faceoff win, the overall importance of that win and shot attempt on the game outcome vary significantly. 
+Although there is benefit to winning both of the above faceoffs and both winning teams are able to generate a shot attempt from the possession sequence following their faceoff win, the overall importance of that win and shot attempt on the game outcome vary significantly.
 
-In Clip 1, Flames forward Tyson Gross wins a neutral zone faceoff midway through the 3rd period while defending a four-goal lead. This faceoff has low leverage, because the game stakes when the faceoff is being taken is low. Regardless of the outcome of the faceoff, Calgary likely has this game in-hand. Alternatively, Clip 2 features a faceoff between J.G. Pageau and Anze Kopitar in the dying seconds of a one-goal game. The Islanders have a six-on-four advantage, with a powerplay and the goalie pulled for an extra attacker in hopes of pushing this game to overtime. This faceoff has higher leverage, because the stakes are high. 
+In Clip 1, Flames forward Tyson Gross wins a neutral zone faceoff midway through the 3rd period while defending a four-goal lead. This faceoff has low leverage, because the game stakes when the faceoff is being taken is low. Regardless of the outcome of the faceoff, Calgary likely has this game in-hand. Alternatively, Clip 2 features a faceoff between J.G. Pageau and Anze Kopitar in the dying seconds of a one-goal game. The Islanders have a six-on-four advantage, with a powerplay and the goalie pulled for an extra attacker in hopes of pushing this game to overtime. This faceoff has higher leverage, because the stakes are high.
 
-While leverage can identify game states where faceoffs matter most, it does not consider the outcome of the faceoff. If Pageau wins the faceoff, the Islanders establish possession with an opportunity to even up the game. On the other hand, if Kopitar wins, the Kings are in a significantly better position to defend their late game lead and come away with the win. Each faceoff serves as a cross-road for the flow of the game. Subsequent scoring opportunities a team can generate varies greatly based on whether or not they win a given faceoff and gain possession of the puck. 
+While leverage can identify game states where faceoffs matter most, it does not consider the outcome of the faceoff. If Pageau wins the faceoff, the Islanders establish possession with an opportunity to even up the game. On the other hand, if Kopitar wins, the Kings are in a significantly better position to defend their late game lead and come away with the win. Each faceoff serves as a cross-road for the flow of the game. Subsequent scoring opportunities a team can generate varies greatly based on whether or not they win a given faceoff and gain possession of the puck.
 
 Faceoff win percentage, calculated as a player’s number of faceoff wins divided by their total number of faceoffs taken, is the primary metric used to measure player faceoff contributions in public hockey circles. However, this metric treats every faceoff as if they were of equal importance. As a result, the greater contributions of players who consistently win high leverage faceoffs that are most meaningful to game outcomes are not being captured. Faceoff win percentage also only captures whether a given faceoff is won or lost, not accounting for events or scoring opportunities to follow.
 
 This research aims to contextualize faceoff leverage through the use of leverage groups and quantify the value of a faceoff win through short-term measures of success and expected benefit. Expected goals (xG) within five seconds of a faceoff were selected as our measure of short-term success. A five-second post-faceoff window was selected for simplicity and due to the structure of the NHL play-by-play data.
 
-
 ## Data
+
 ```{r}
 require(ggplot2)
 require(tidyverse)
@@ -55,7 +54,6 @@ nhl.mod = readRDS("Shiny/nhl_mod.RDS")
 leverageVariables = readRDS("leverageVariables.rds")
 ```
 
-
 The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. We specifically looked at NHL play-by-play data for the 2021-2022 to 2025-2026 seasons due to improvements in game scoring and shot tracking. Since the NHL play-by-play consists of discrete event data rather than continuous puck and player tracking, the exact duration of influence for a given faceoff can’t be accurately observed. A five-second window provides a practical approximation of the post-faceoff sequence while limiting unrelated downstream events.
 
 Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.Allowing the events occurring after the facoff to have their own unique rows allows for the Shiny app to enable multiple event sequences instead of just looking at a faceoff.
@@ -63,7 +61,6 @@ Two unique data sets were compiled from one large five-season play-by-play data 
 ```{r}
 #first data set 
 ```
-
 
 ```{r}
 events_model |>
@@ -74,9 +71,7 @@ events_model |>
 
 ```
 
-
 Post-faceoff windows without a continuous five-second window of play to generate a scoring opportunity remain part of the dataset. These “censored” values arise when a penalty is committed or the puck is flipped out of play. An available scoring opportunity variable is calculated in seconds as a feature during the modeling phase to evaluate scoring opportunity over the subsequent five seconds of a faceoff.
-
 
 ### EDA
 
@@ -236,11 +231,12 @@ From there, the following three models were evaluated using five-fold cross-vali
 
 - Gaussian generalized additive model (GAM) with score-specific smooths for time remaining and available window
 
-| Model       | RMSE    | MAE     | 
-|-------------|---------|---------|
-| Tweedie GAM | 0.0173  | 0.00386 |
-| Gaussian GAM| 0.0173  | 0.00390 |
-| Tweedie GLM | 0.0174  | 0.00402 |
+| Model        | RMSE   | MAE     |
+|--------------|--------|---------|
+| Tweedie GAM  | 0.0173 | 0.00386 |
+| Gaussian GAM | 0.0173 | 0.00390 |
+| Tweedie GLM  | 0.0174 | 0.00402 |
+
 : Table comparing goal likelihood models
 
 While the Gaussian and Tweedie GAMs produced nearly identical RMSE values, the Gaussian model generated impossible negative xG predictions. The Tweedie GAM achieved the lowest prediction error while avoiding negative xG values. The Tweedie GLM performed slightly worse, supporting the use of nonlinear smooth terms.
@@ -269,12 +265,9 @@ Holding the current game state variables constant, two hypothetical scenarios we
 
 ### Quantifying Faceoff Value
 
-A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. Due to the large sample size, the model was estimated using the `bam()` function from the **mgcv** package, which fits a GAM more efficiently. Thus, we modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows.
-$$
-\begin{aligned}
+A simple logistic regression was first tried due to the binary variable of future unblocked shot attempt. However, when coordinates were looked at as a predictor, we decided to transition to a generalized additive model for smoothing. Due to the large sample size, the model was estimated using the `bam()` function from the **mgcv** package, which fits a GAM more efficiently. Thus, we modeled the probability of a future unblocked shot $(Y_i = 1)$ using a generalized additive model with a binomial error distribution and logit link function. The model was formulated as follows. $$\begin{aligned}
 \log\left(\frac{P(\text{future\_shot}_i = 1)}{1 - P(\text{future\_shot}_i = 1)}\right) = \beta_0 &+ \beta_1(\text{eventTypeDescKey}_i) + s(\text{xCoord}_i, \text{yCoord}_i) + s(\text{distance}_i) \\&+ s(\text{secondsElapsedInGame}_i) + \beta_2(\text{strengthState}_i \times \text{scoreState}_i) \vphantom{\frac{1}{2}} \\&+ \beta_3(\text{isEmptyNetFor}_i) + \beta_4(\text{isEmptyNetAgainst}_i) + s(\text{angle}_i) + \varepsilon_i \vphantom{\frac{1}{2}}
-\end{aligned}
-$$
+\end{aligned}$$
 
 The nonlinear effects of event location, distance and angle from the net, and seconds elapsed were modeled using thin plate regression splines with the basis dimensions (k) capped to avoid overfitting (k = 30 for coordinates, k = 20 for distance, and k = 15 for angle). The model also used fast Restricted Maximum Likelihood to cut down on processing time.
 
@@ -354,85 +347,3 @@ Give your conclusions and summarize what you have learned with regards to your q
 
 Ultimately we are able to determine if events directly following a faceoff will result in a future unblocked shot attempt. However, these probabilities are either on the very low end (\< 0.2) or on the higher end (\>0.60) most likely due to the use if o binary predictor.
 
-## Appendix: A quick tutorial
-
-**(Feel free to remove this section when you submit)**
-
-This a Quarto document. To learn more about Quarto see <https://quarto.org>. You can use the Render button to see what it looks like in HTML.
-
-### Text formatting
-
-Text can be bolded with **double asterisks** and italicized with *single asterisks*. Monospace text, such as for short code snippets, uses `backticks`. (Note these are different from quotation marks or apostrophes.) Links are written [like this](http://example.com/).
-
-Bulleted lists can be written with asterisks:
-
-- Each item starts on a new line with an asterisk.
-- Items should start on the beginning of the line.
-- Leave blank lines after the end of the list so the list does not continue.
-
-Mathematics can be written with LaTeX syntax using dollar signs. For instance, using single dollar signs we can write inline math: $(-b \pm \sqrt{b^2 - 4ac})/2a$.
-
-To write math in "display style", i.e. displayed on its own line centered on the page, we use double dollar signs: $$x^2 + y^2 = 1$$
-
-### Code blocks
-
-Code blocks are evaluated sequentially when you hit Render. As the code runs, `R` prints out which block is running, so naming blocks is useful if you want to know which one takes a long time. After the block name, you can specify [chunk options](https://yihui.org/knitr/options/). For example, `echo` controls whether the code is printed in the document. By default, output is printed in the document in monospace:
-
-```{r, echo = FALSE}
-head(mtcars)
-```
-
-Chunk options can also be written inside the code block, which is helpful for really long options, as we'll see soon.
-
-```{r}
-#| echo: false
-head(mtcars)
-```
-
-### Figures
-
-If a code block produces a plot or figure, this figure will automatically be inserted inline in the report. That is, it will be inserted exactly where the code block is.
-
-```{r}
-#| fig-width: 5
-#| fig-height: 3.5
-#| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
-
-library(tidyverse)
-mtcars |> 
-  ggplot(aes(x = mpg, y = hp)) +
-  geom_point() +
-  labs(x = "Miles per gallon",
-       y = "Horsepower")
-```
-
-Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
-
-### Tables
-
-Use the `knitr::kable()` function to print tables as HTML:
-
-```{r}
-mtcars |> 
-  slice(1:5) |> 
-  knitr::kable()
-```
-
-We can summarize model results with a table. For instance, suppose we fit a linear regression model:
-
-```{r}
-#| echo: true
-model1 <- lm(mpg ~ disp + hp + drat, data = mtcars)
-```
-
-It is *not* appropriate to simply print `summary(model1)` into the report. If we want the reader to understand what models we have fit and what their results are, we should provide a nicely formatted table. A simple option is to use the `tidy()` function from the `broom` package to get a data frame of the model fit, and simply report that as a table.
-
-```{r }
-#| results: "asis"
-#| tbl-cap: "Predicting fuel economy using vehicle features."
-library(broom)
-model1 |> 
-  tidy() |>
-  knitr::kable(digits = 2,
-               col.names = c("Term", "Estimate", "SE", "t", "p"))
-```

@@ -3,14 +3,15 @@ Raw FOW% treats every faceoff equally, but does not adequately capture players t
 1. Are certain players better in high leverage situations? 
 2. Can we quantify faceoff value?
 # Leverage Score Steps
-1. Run the ‘pbp.R’ script to scrape NHL play-by-play into the console and clean the data.
-2. Run the ‘schedule.R’ script to scrape the NHL season schedule into the console and clean the data.
+1. Run the 'model EDA plots.R' script to view exploratory data analyiss (EDA).
+2. Run the ‘pbp.R’ script to scrape NHL play-by-play into the console and clean the data.
+3. Run the ‘schedule.R’ script to scrape the NHL season schedule into the console and clean the data.
 3. Run the ‘players.R’ script to scrape NHL player bios into the console and clean the data.
 4. Run the ‘gameLogs.R’ script to scrape NHL player career totals into the console and clean the data.
 5. Run the ‘rosters.R’ script to scrape the NHL rosters by game into the console and clean the data.
 6. Run the ‘variables.R’ script to build a clean, mirrored event-level faceoff dataset for modeling.
-7. Run the ‘leverage score.R’ script to run the models and calculate a leverage score for every faceoff.
-8. Run the ‘wp model.R’ and ‘xG model.R’ scripts to compare modeling techniques for goal value and goal likelihood within 5 seconds of the faceoff.
+7. Run the ‘leverage score & faceoff win value.R’ script to run the models. These models calculate a leverage score and the expected win value for every faceoff.
+8. Run the ‘goal value model validation.R’, ‘goal likelihood model validation.R’, and 'faceoff win value model validation.R' scripts to compare modeling techniques for goal value, goal likelihood, and faceoff win value within 5 seconds of a faceoff.
 9. Run the ‘leverage score analysis.R’ script to split the leverage scores into natural clusters and create data visualizations.
 # Shiny App Steps
 1. Open the shiny folder

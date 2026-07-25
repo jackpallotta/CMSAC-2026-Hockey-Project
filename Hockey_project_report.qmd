@@ -23,7 +23,7 @@ editor: visual
 
 ## Introduction
 
-Every hockey game includes about 55 to 60 faceoff events. There is an opening faceoff that takes place at center ice to mark the beginning of each period and additional, dynamically occurring faceoffs that take place at any one of nine faceoff dot locations after each stoppage in play. The faceoff event is a primary responsibility of the center position in hockey, but any player is eligible to take a faceoff besides the goaltender. While a fan may reduce faceoff events to mere breaks or pauses in the speed and intensity of gameplay, well-respected National Hockey League players and coaches attest that the outcome of faceoff events carry meaningful implications on hockey games and offer competitive advantages to the team who is able to win it. In a [morning skate interview](https://lakingsinsider.com/2014/01/30/january-30-morning-skate-quotes-voynov-kopitar-stoll/) with LA Kings Insider, two-time Stanley Cup Champion Jarret Stoll stated that winning the battle amongst elite centers begins with faceoffs, linking faceoff wins to increased puck possession and opportunities to generate scoring chances. Since retiring from his playing career, Stoll has transitioned into a player development coach role with the Los Angeles Kings and continues to discuss the nuances of faceoff events in the public sphere [link](https://www.sportsnet.ca/hockey/nhl/stoll-breaks-kings-miracle-0-9-second-faceoff-play/).
+Every hockey game includes about 55 to 60 faceoff events. There is an opening faceoff that takes place at center ice to mark the beginning of each period and additional, dynamically occurring faceoffs that take place at any one of nine faceoff dot locations after each stoppage in play. The faceoff event is a primary responsibility of the center position in hockey, but any player is eligible to take a faceoff besides the goaltender. While a fan may reduce faceoff events to mere breaks or pauses in the speed and intensity of gameplay, well-respected National Hockey League players and coaches attest that the outcome of faceoff events carry meaningful implications on hockey games and offer competitive advantages to the team who is able to win it. In a [morning skate interview](https://lakingsinsider.com/2014/01/30/january-30-morning-skate-quotes-voynov-kopitar-stoll/) with LA Kings Insider, two-time Stanley Cup Champion Jarret Stoll stated that winning the battle amongst elite centers begins with faceoffs, linking faceoff wins to increased puck possession and opportunities to generate scoring chances. Since retiring from his playing career, Stoll has transitioned into a player development coach role with the Los Angeles Kings and continues to [discuss the nuances of faceoff events in the public sphere](https://www.sportsnet.ca/hockey/nhl/stoll-breaks-kings-miracle-0-9-second-faceoff-play/).
 
 When watching a hockey game, it is clear that certain game states are more determinant of winning the game than others. As a result, the relative importance of a faceoff win (or any event, for that matter) is not static; it varies based on the game state. For the purposes of this project, leverage can be defined as the power of a faceoff outcome to greatly impact the game outcome. In certain game states that are of higher leverage, winning or losing a given faceoff could greatly impact whether the faceoff team wins or loses the game. In lower leverage game states, winning or losing a given faceoff is less determinant of winning or losing the game.
 
@@ -52,6 +52,7 @@ require(ggplot2)
 require(tidyverse)
 require(pROC)
 require(gt)
+require(mgcv)
 theme_set(theme_bw())
 events_after_faceoff2 = readRDS("Shiny/events_after_faceoff2.rds")
 events_model = readRDS("Shiny/events_model.rds")
@@ -63,7 +64,7 @@ faceoffValueData = readRDS("faceoffValueData.rds")
 
 The data used throughout the project is pulled from the publicly available [nhlscraper](https://rentosaijo.github.io/nhlscraper/) R package created by Rento Saijo. We specifically looked at NHL play-by-play data for the 2021-2022 to 2025-2026 seasons due to improvements in game scoring and shot tracking. Since the NHL play-by-play consists of discrete event data rather than continuous puck and player tracking, the exact duration of influence for a given faceoff can’t be accurately observed. A five-second window provides a practical approximation of the post-faceoff sequence while limiting unrelated downstream events.
 
-Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app.Allowing the events occurring after the facoff to have their own unique rows allows for the Shiny app to enable multiple event sequences instead of just looking at a faceoff.
+Two unique data sets were compiled from one large five-season play-by-play data set. The raw NHL play-by-play data provides information regarding a single faceoff event from the perspective of the winning team. Our first dataset is a restructured version of this, specifically for faceoff events, so that each faceoff event has two corresponding rows of data for each team involved. The mirroring of the faceoff dataset enabled us to explore faceoff events from each team’s perspective, which was very beneficial for modeling. Second, another dataset focuses on events that occur within five seconds of a faceoff with a binary unblocked shot attempt variable for the interactive Shiny app. Allowing the events occurring after the facoff to have their own unique rows allows for the Shiny app to enable multiple event sequences instead of just looking at a faceoff.
 
 ```{r}
 #| tbl-cap: "Data set mirroring faceoffs"
@@ -96,7 +97,6 @@ The first component in estimating leverage is the win probability for the two te
 
 A plot of the relationship between time remaining and empirical win percentage, faceted by the goal differential, shows that time effects are nonlinear with empirical win percentage. Once a multi-goal lead is built, empirical win probability tails off as the game nears its conclusion. For score differentials greater than three goals, observations were grouped into a ±3 differential bucket for interpretability.
 
-Figure One
 ```{r}
 #| fig-cap: "Figure One"
 leverageVariables |>
@@ -126,8 +126,6 @@ leverageVariables |>
 
 Strength state, or the on-ice manpower situation between opposing teams, is another factor to consider when quantifying leverage. A plot of empirical win percentage by strength state indicates that win probability changes given the man differential. The data contained a limited number of ±3 manpower situations, so ±2 with an empty net for or against were grouped to create the "EN ±2" strength state.
 
-Figure Two
-
 ```{r}
 #| fig-cap: "Figure Two"
 leverageVariables |>
@@ -154,7 +152,7 @@ leverageVariables |>
 
 Considering only a five-second window within faceoffs, distance from the attacking net plays a factor in the expected value of winning the draw. Winning an offensive zone faceoff produces a much higher mean xG within five seconds of a faceoff.
 
-Figure Three
+
 ```{r}
 #| fig-cap: "Figure Three"
 leverageVariables |>
@@ -179,7 +177,7 @@ leverageVariables |>
 The following graphs are EDA and looking at variables for the future shot probability portion of quantifying faceoff value. The bar chart of shot attempts between three NHL teams (Carolina, Chicago, and Pittsburgh) depicts that the majority of shot attempts for teams occur in the offensive zone. Also, over 50% of shot attempts are successful for these teams. For more accuracy and specificity in the future shot probability model, the specific coordinates were used as predictors rather than zone code.
 
 ```{r}
-#| fig-cap: "The bar chart shows the count of shot attempts in each zone and whether the shot attempt was successful or not."
+#| fig-cap: "Figure Four: The bar chart shows the count of shot attempts in each zone and whether the shot attempt was successful or not."
 barplot4 = events_after_faceoff2 |>
   filter(eventOwnerTeamId == 12 | eventOwnerTeamId == 16 | eventOwnerTeamId == 5, !is.na(zoneCode)) |> 
   mutate(teams = case_when(eventOwnerTeamId == 12 ~ "CAR",
@@ -196,7 +194,7 @@ barplot4
 The following looks at a 2D kernel density estimation map of the offensive zone in hockey and where the future shot attempts took place. 
 
 ```{r}
-#| fig-cap: "The map depicts high densities of future shot attempts taking place around the faceoff dots."
+#| fig-cap: "Figure Five: The map depicts high densities of future shot attempts taking place around the faceoff dots."
 future_shot_data = events_model |>
   select(xCoord, yCoord, future_shot) |>
   filter(xCoord >= 0) 
@@ -205,13 +203,11 @@ ggplot(data = future_shot_data, aes(x = xCoord, y = yCoord)) +
   geom_point(size = 1, alpha = 0.1) +
   geom_density_2d(lwd = 1.5) +
   coord_fixed() +
-  lab(title= "2D Kernel Density Map")
+  labs(title= "2D Kernel Density Map")
 ```
 
 
 ## Methods
-
-Describe the modeling techniques you chose, their assumptions, justifications for why they are appropriate for the problem, and how you're comparing/evaluating the different methods.
 
 ### High Leverage Performance
 
@@ -219,13 +215,15 @@ The leverage model combines goal value and goal likelihood. Goal value is measur
 
 #### Modeling Goal Value (Win Probability)
 
-The first component of the leverage model, goal value, estimates win probability from each team's perspective given the current game state right before the faceoff. Predictors included goal differential, seconds remaining, zone, situation code, and a binary overtime status variable. (Link EDA plot) Exploratory analysis revealed the time remaining depends on the goal differential, motivating an interaction between the two variables. For example, the figure shows that the win probability for a team leading by one goal remains relatively stable, then spikes in the later stages of the game. Interactions between other features such as situation code and zone were considered but ultimately were not significant.
+The first component of the leverage model, goal value, estimates win probability from each team's perspective given the current game state right before the faceoff. Predictors included goal differential, seconds remaining, zone, situation code, and a binary overtime status variable. Exploratory analysis (Figure One) revealed the time remaining depends on the goal differential, motivating an interaction between the two variables. For example, the figure shows that the win probability for a team leading by one goal remains relatively stable, then spikes in the later stages of the game. Interactions between other features such as situation code and zone were considered but ultimately were not significant.
 
 From there, the following three models were evaluated using five-fold cross-validation with folds assigned by game to maintain the mirrored faceoff data structure.
 
-Logistic regression with linear time effects Logistic regression with natural spline time effects A generalized additive model (GAM) with score-specific smooths for time remaining
+- Logistic regression with linear time effects\ 
+- Logistic regression with natural spline time effects\ 
+- A generalized additive model (GAM) with score-specific smooths for time remaining\
 
-Model performance was evaluated using AUC, Brier score, and calibration. As expected, the nonlinear approaches outperformed the logistic regression (AUC = 0.817 vs. 0.812; Brier = 0.1717 vs. 0.1739). The spline model and GAM both adequately captured the relationship between goal differential and seconds remaining, producing virtually identical predictive performance and calibration.
+The spline model and GAM both adequately captured the relationship between goal differential and seconds remaining, producing virtually identical predictive performance and calibration.
 
 Ultimately, the GAM was selected because, rather than specifying the spline degrees of freedom, the model estimates the shape of the nonlinear relationship from the data through penalized smoothing.
 
@@ -261,17 +259,21 @@ These two components are added to produce a leverage score, which is normalized 
 
 Lastly, the normalized leverage scores were bucketed into three leverage groups: high, medium, and low. Jenks natural breaks clustering, a one-dimensional method, was selected to minimize within-group variance and maximize between-group variance. Three leverage groups were picked to balance interpretability with meaningful separation between game states.
 
+![Figure Six](jack_rplot2.png)
+
 ### Quantifying Faceoff Value
 
 #### Modeling Faceoff Win Value
 
 The faceoff win value model incorporates the outcome of the faceoff to estimate the expected benefit of winning the draw. In other words, the faceoff win value model is contingent on a faceoff win or loss. Faceoff win value is calculated as the predicted change in net xG between winning and losing the same faceoff.
 
-(Link back to EDA plot) Exploratory analysis showed that winning a faceoff in the offensive zone will produce a much higher xG value on average within five seconds of a faceoff compared to the neutral zone and defensive zone. Therefore, an interaction between winning the faceoff and zone code was added. Intuitively, this makes sense because there’s less distance from the attacking goal with a faceoff stationed in the offensive zone, especially if the winning team starts a clean possession.
+Exploratory analysis (Figure Three) showed that winning a faceoff in the offensive zone will produce a much higher xG value on average within five seconds of a faceoff compared to the neutral zone and defensive zone. Therefore, an interaction between winning the faceoff and zone code was added. Intuitively, this makes sense because there’s less distance from the attacking goal with a faceoff stationed in the offensive zone, especially if the winning team starts a clean possession.
 
 Like the goal likelihood model, a Tweedie GAM evaluated xG For and xG Against within a five-second window to estimate the value of winning that faceoff. Each model included faceoff outcome (binary win/loss variable) interacted with zone code, along with goal differential, score-specific smooths (interaction between goal differential and seconds remaining), overtime variable, and the log-transformed available window.
 
-![](jack_Rplot05.png)
+![Figure Seven](jack_Rplot05.png)
+
+In the example from figure seven, the game scenario is set with 57 seconds remaining from the perspective of the team trailing by one goal at five-on-five in the offensive zone. The model estimates that winning the faceoff will produce a net 0.008 xG within five seconds of the faceoff, calculated by subtracting the predicted xG created off a win from the predicted xG created off a loss.
 
 Holding the current game state variables constant, two hypothetical scenarios were created by setting the outcome to either a win or a loss. The offensive and defensive values were measured as the difference in xG between these scenarios. An overall faceoff win value is computed by weighing both the offensive and defensive sides of the puck given the impact of a goal for or against in the current game state. Offensive and defensive values are combined to create a net xG faceoff win value.
 
@@ -301,7 +303,7 @@ Through our analysis of faceoff win percentage (FOW%) by leverage group, we obse
 
 Pierre-Luc Dubois’ increased faceoff percentage in high leverage situations is a prime example of the value that leverage context can add to faceoff contribution analysis. While Dubois’ overall faceoff percentage across our sample is below league average at 48.6%, his faceoff performance increases 10.68% from low-leverage to high-leverage situations. In his 61 high-leverage faceoffs, Dubois performed among the best in our sample, fielding a 58.8% faceoff win percentage in high-leverage situations after applying an Empirical Bayes shrinkage technique to adjust for variation in the number of high-leverage faceoffs taken.
 
-Goal value performance was evaluated using AUC, Brier score, and calibration. As expected, the nonlinear approaches outperformed the logistic regression (AUC = 0.817 vs. 0.812; Brier = 0.1717 vs. 0.1739).
+As for the models, the overall goal value performance was evaluated using AUC, Brier score, and calibration. As expected, the nonlinear approaches outperformed the logistic regression (AUC = 0.817 vs. 0.812; Brier = 0.1717 vs. 0.1739).
 
 Goal likelihood performance was evaluated using RMSE and MAE. While the Gaussian and Tweedie GAMs produced nearly identical RMSE values, the Gaussian model generated impossible negative xG predictions. The Tweedie GAM achieved the lowest prediction error while avoiding negative xG values. The Tweedie GLM performed slightly worse, supporting the use of nonlinear smooth terms.
 
@@ -395,6 +397,7 @@ On the flip side, we see a group of players consistently named finalists for the
 Net Win Value Leaders
 
 ```{r}
+
 netWinValueTable <- playerWinValueRankings |>
   slice_max(totalNetWinValue, n = 10, with_ties = FALSE) |>
   arrange(desc(totalNetWinValue)) |>
@@ -428,6 +431,7 @@ Three players appeared on both the offensive and defensive win value lists. Anze
 The future shot probability model resulted in high accuracy at predicting when a future shot after a faceoff will occur. The following plot is a calibration plot of the model showing how the model accurately predicts on the low and high end of shot probabilities, but is missing predictions in the middle range.
 
 ```{r}
+#| fig-cap: "Figure Eight"
 shot_results = train_data |>
   select(future_shot, eventTypeDescKey, xCoord, yCoord,distance, scoreState, strengthState,
          secondsElapsedInGame, angle, isEmptyNetFor, isEmptyNetAgainst) |>
@@ -460,6 +464,7 @@ ggplot(shot_calibration_check,
 The following plot is a ROC plot showing how the model is also quite accurate. The model had an AUC of 0.946, indicating good discrimination between predicting when a future unblocked shot attempt would occur and when it would not occur.
 
 ```{r}
+#| fig-cap: "Figure Nine"
 roc_obj2 = roc(
   response = shot_results$future_shot,
   predictor = shot_results$shot_prob,
@@ -500,6 +505,11 @@ saveRDS(train_data, "train_data.rds")
 test_data = events_model |>
   filter(!faceoff_row %in% train_ids)
 
+test.mod = bam(future_shot~ eventTypeDescKey + s(xCoord,yCoord, k = 30) + 
+                 s(distance, k = 20) + s(secondsElapsedInGame) + strengthState*scoreState +
+                 isEmptyNetFor + isEmptyNetAgainst + s(angle, k = 15) , 
+               data = train_data, family = binomial(link = logit), method = "fREML", discrete = TRUE)
+
 test_data$pred_prob = predict(test.mod, newdata = test_data, type = "response")
 
 train_data$pred_prob = predict(test.mod, newdata = train_data, type = "response")
@@ -523,7 +533,7 @@ A key limitation of our research is the arbitrary five-second post-faceoff windo
 
 Another shortcoming of our research is that faceoff deployment is heavily impacted by who the head coach trusts to be on the ice in big moments. Players do not receive equal opportunity across leverage groups, meaning there may be some high-leverage performers who did not get the chance to display their ability in a large enough sample. Moreover, these models do not account for the historical skill of each player at the faceoff dot, or the other players on the ice who can help win the faceoff, whether by tying up opponents or pushing a puck back to a teammate for possession.
 
-There are also intangible nuances with faceoffs in the NHL that would be difficult for a model to quantify. The puck is dropped by a referee, which means human error impacts the speed and effect of the puck striking the ice surface. Furthermore, retired NHL player Paul Stastny, who won a respectable 53.8% of his faceoffs during his career, attests that some players lose faceoffs on purpose to jump the opponent for possession including but not limited to Ryan Getzlaf and Corey Perry who frequently did this back in his playing days. Lastly, there is a tactic where players will flip their stick around to pull the puck back if a player is taking a faceoff on his weak side, or where stick and body handedness do not naturally match the side of the ice the faceoff is on. The New York Rangers deployed this strategy during the 2023-24 season, in which they won the Presidents' Trophy as the league’s best regular-season team, while seeing a jump in team FOW% relative to previous seasons.
+There are also intangible nuances with faceoffs in the NHL that would be difficult for a model to quantify. The puck is dropped by a referee, which means human error impacts the speed and effect of the puck striking the ice surface. Furthermore, retired NHL player Paul Stastny, who won a respectable 53.8% of his faceoffs during his career, attests that some players lose faceoffs on purpose to jump the opponent for possession including but not limited to Ryan Getzlaf and Corey Perry who frequently did this back in his playing days. Lastly, there is a tactic where players will flip their stick around to pull the puck back if a player is taking a faceoff on his weak side, or where stick and body handedness do not naturally match the side of the ice the faceoff is on. The New York Rangers deployed this strategy during the 2023-24 season, in which they won the Presidents' Trophy as the league’s best regular-season team, while seeing a jump in team FOW% relative to previous seasons. [Greg Revak](https://hockeysarsenal.substack.com/p/flipped-handed-faceoffs)
 
 Some limitations withgarding the the model used to create the Shiny was incorporating the teams that are involved in the game (faceoff, and following events) as well as incorporating who won the faceoff. Thus the model and, subsequently, the Shiny app are independent of who wins the the faceoff.
 
@@ -535,6 +545,8 @@ Given the opportunity, access to the NHL’s puck and player tracking data would
 
 ## Appendix
 
+[Shiny App](https://nhlfaceoffsimulator.shinyapps.io/shiny/)
+
 ### Contact Information
 
 Chloe Guagliano: [chloeguagliano\@gmail.com](mailto:chloeguagliano@gmail.com)\
@@ -543,7 +555,7 @@ Jack Pallotta: [jackjpallotta\@gmail.com](mailto:jackjpallotta@gmail.com)\
 
 ### Acknowledgments
 
-A special thank you to Caleb Peña and Mark Weinstein from the Pittsburgh Penguins for their guidance and support throughout the project. We also want to thank Sara Colando, Erin Franke, and the program TAs for their instruction and advice during the entire summer research experience. Finally, we want to thank Dr. Ron Yurko, along with the entire Carnegie Mellon Statistics and Data Science department, for the opportunity to attend CMSAC this summer
+A special thank you to Caleb Peña and Mark Weinstein from the Pittsburgh Penguins for their guidance and support throughout the project. We also want to thank Sara Colando, Erin Franke, and the program TAs for their instruction and advice during the entire summer research experience. Finally, we want to thank Dr. Ron Yurko, along with the entire Carnegie Mellon Statistics and Data Science department, for the opportunity to attend CMSAC this summer.
 
 ### References
 

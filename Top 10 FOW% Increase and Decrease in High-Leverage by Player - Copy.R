@@ -10,7 +10,6 @@ library(ggplot2)
 
 faceoffData = readRDS('faceoffData.rds')
 
-
 ## using Jenks Natural Breaks to find natural breaks in leverage score
 ## (essentially the 1D equivalent to k-means clustering)
 set.seed(91)

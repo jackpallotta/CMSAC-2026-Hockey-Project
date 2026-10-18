@@ -122,7 +122,11 @@ workingFOW_byLeverage = fow_byLeverage
 ## calculating difference between high and low leverage success
 fow_byLeverage = fow_byLeverage |>
   mutate(difference = shrunkHighLevPct - shrunkLowLevPct) |>
-  arrange(desc(difference)) |>
+  arrange(desc(difference))
+  
+saveRDS(fow_byLeverage, 'fow_byLeverage.RDS')
+
+fow_byLeverage = fow_byLeverage |>
   select(player, highleverageAttempts, difference) |>
   head(10)
 
@@ -254,5 +258,6 @@ breaks |>
     ),
     locations = cells_body(rows = 3)
   )
+
 
 

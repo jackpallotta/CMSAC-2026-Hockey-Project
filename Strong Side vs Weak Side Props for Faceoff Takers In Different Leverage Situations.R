@@ -32,6 +32,7 @@ faceoffData = faceoffData |>
 faceoffData |>
   mutate(strongSide = as.factor(strongSide)) |>
   select(strongSide, bins) |>
+  filter(bins != 'Medium') |>
   count(strongSide, bins) |>
   arrange(bins) |>
   group_by(bins) |>
@@ -42,11 +43,14 @@ faceoffData |>
   geom_col() + 
   labs(x = 'Leverage Group',
        y = 'Proportion of Faceoff Takers',
-       fill = 'Faceoff Side') +
+       fill = 'Faceoff Side',
+       caption = 'Data courtesy of the NHL') +
   scale_fill_manual(
     values = c("0" = "#79BAEC", "1" = "#4682B4"),
     labels = c("Weak Side", "Strong Side")
-  )
+  ) +
+  theme_light() +
+  theme(legend.position = "bottom")
 
 ## comparing proportion of SS / WW / SW faceoffs for each leverage group
 ## (i.e. how many high-leverage faceoffs were strong side vs strong side in comparsion
@@ -91,13 +95,14 @@ faceoffData |>
     values = c("0" = "#79BAEC", "1" = "#4682B4", "2" = "#123456"),
     labels = c("Weak Side x2", "Weak vs Strong Side", "Strong Side x2")
   ) + 
-  labs(x = 'Leverage Group', y = 'Proportion of Faceoffs', color = 'Faceoff Matchup Type')
+  labs(x = 'Leverage Group', y = 'Proportion of Faceoffs', color = 'Faceoff Matchup Type') +
+  theme_light()
 
 ## causal inference: faceoff success in each strong side / weak side split per leverage
 ##                   group; look for trends within those splits and analyze players that way
 
 ## making considerations for both faceoffTaker and opponent (4 possible matchupTypes)
-faceoffData |>
+faceoffTakerPlusOpponent = faceoffData |>
   select(eventId, player, strongSide, faceoffWon, bins) |>
   group_by(eventId) |>
   mutate(sideSum = sum(strongSide)) |>
@@ -121,12 +126,33 @@ faceoffData |>
   mutate(highLevCount = sum(faceoffsTaken[bins == "High"])) |>
   filter(highLevCount >= 50) |>
   filter(bins != 'Medium') |>
-  filter(player == 'Pierre-Luc Dubois')
+  ungroup() |>
+  select(matchupType, bins, situationalPct) |>
+  group_by(matchupType, bins) |>
+  summarise(meanPct = mean(situationalPct))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## making considerations only for faceoffTaker (2 possible matchupTypes)
 ## (No conclusion drawn here really; realized we needed to go another direction!)
-faceoffData |>
+updated = faceoffData |>
   select(player, strongSide, faceoffWon, bins) |>
   count(player, strongSide, faceoffWon, bins) |>
   group_by(player, strongSide, bins) |>
@@ -142,6 +168,70 @@ faceoffData |>
   mutate(strongSide = case_when(strongSide == 1 ~ 'S',
                                 strongSide == 0 ~ 'W')) |>
   filter(bins != 'Medium')
+
+
+alphaBeta <- function(meanPct, varPct) {
+  
+  common <- meanPct * (1 - meanPct) / varPct - 1
+  
+  alpha <- meanPct * common
+  beta <- (1 - meanPct) * common
+  
+  return(c(alpha = alpha, beta = beta))
+}
+
+highleverage_meanPct <- updated |>
+  filter(bins == "High") |>
+  summarise(meanPct = mean(situationalPct, na.rm = TRUE))
+
+highleverage_varPct <- updated |>
+  filter(bins == "High") |>
+  summarise(variance = var(situationalPct, na.rm = TRUE))
+
+prior <- alphaBeta(highleverage_meanPct, highleverage_varPct)
+
+alpha <- prior[[1]]
+beta  <- prior[[2]]
+
+updated = updated |>
+  mutate(shrunkHighLevPct =
+           ((situationalPct * faceoffsTaken) + alpha) /
+           (faceoffsTaken + alpha + beta))
+
+
+lowleverage_meanPct <- updated |>
+  filter(bins == "Low") |>
+  summarise(meanPct = mean(situationalPct, na.rm = TRUE))
+
+lowleverage_varPct <- updated |>
+  filter(bins == "Low") |>
+  summarise(variance = var(situationalPct, na.rm = TRUE))
+
+prior <- alphaBeta(lowleverage_meanPct, lowleverage_varPct)
+
+alpha <- prior[[1]]
+beta  <- prior[[2]]
+
+updated = updated |>
+  mutate(shrunkLowLevPct =
+           ((situationalPct * faceoffsTaken) + alpha) /
+           (faceoffsTaken + alpha + beta))
+
+updated = updated |>
+  mutate(relevantShrunkPct = case_when(bins == 'High' ~ shrunkHighLevPct,
+                                       bins == 'Low' ~ shrunkLowLevPct)) |>
+  select(strongSide, bins, relevantShrunkPct) |>
+  group_by(strongSide, bins) |>
+  summarise(fowPct = mean(relevantShrunkPct))
+
+
+
+
+
+
+
+
+
 
 
 #########################################################################
@@ -167,12 +257,45 @@ strongSideProp = faceoffData |>
   select(player, strongSide, bins, prop) |>
   pivot_wider(names_from = bins, values_from = prop) |>
   mutate(ss_PropDiff = High - Low) |>
-  select(player, ss_PropDiff)
+  select(player, ss_PropDiff) 
+
+## looking at prop of faceoffs taken on SS vs WS across leverage groups
+faceoffData |>
+  select(player, strongSide, bins) |>
+  count(player, strongSide, bins) |>
+  group_by(player, bins) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup() |>
+  filter(bins != 'Medium') |>
+  count(strongSide, bins) |>
+  group_by(bins) |>
+  mutate(prop = n / sum(n)) |>
+  arrange(bins)
 
 ## putting everything altogether!
 confounderData = fow_byLeverage |>
   left_join(strongSideProp, by = 'player')
 
+correlation <- cor(
+  confounderData$ss_PropDiff,
+  confounderData$difference,
+  use = "complete.obs"
+)
+
 confounderData |>
   ggplot(aes(x = ss_PropDiff, y = difference)) +
-  geom_point()
+  geom_point() +
+  labs(x = 'Difference in Proportion of Faceoffs on Strong Side',
+       y = 'Difference in Faceoff Win Percentage',
+       caption = 'Data Courtesy of the NHL') +
+  theme_light() +
+  geom_smooth(method = "lm", se = TRUE) +
+  annotate(
+    "text",
+    x = Inf,
+    y = Inf,
+    label = paste0("r = ", round(correlation, 3)),
+    hjust = 1.2,
+    vjust = 1.5,
+    size = 4
+  ) 
